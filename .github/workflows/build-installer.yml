@@ -26,10 +26,10 @@ jobs:
       run: choco install innosetup --yes
 
     - name: Build Installer
-      run: '"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\SmtpRelayInstaller.iss'
+      run: '"C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer\\SmtpRelayInstaller.iss'
 
     - name: Upload Installer
       uses: actions/upload-artifact@v4
       with:
-        name: SmtpRelaySetup
+        name: smtp-relay-installer
         path: SmtpRelaySetup.exe
