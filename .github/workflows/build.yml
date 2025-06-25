@@ -3,8 +3,6 @@ name: Build SMTP Relay
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   build:
@@ -16,13 +14,15 @@ jobs:
       with:
         dotnet-version: '8.0.x'
     - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --configuration Release
+      run: dotnet restore ./src/SmtpRelay/SmtpRelay.csproj
+    - name: Build Service
+      run: dotnet build ./src/SmtpRelay/SmtpRelay.csproj --configuration Release
+    - name: Build GUI
+      run: dotnet build ./src/SmtpRelay.GUI/SmtpRelay.GUI.csproj --configuration Release
     - name: Publish
       run: dotnet publish ./src/SmtpRelay/SmtpRelay.csproj -c Release -o ./output
-    - name: Upload Build Artifact
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: smtp-relay-installer
+        name: smtp-relay-build
         path: ./output
