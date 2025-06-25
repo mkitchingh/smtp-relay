@@ -1,2 +1,2 @@
 # SMTP Relay
-Production-ready SMTP relay with service and GUI.
+Production-ready Windows SMTP relay with service and GUI.
