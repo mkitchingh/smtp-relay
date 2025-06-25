@@ -22,7 +22,7 @@ jobs:
     - name: Publish
       run: dotnet publish ./src/SmtpRelay/SmtpRelay.csproj -c Release -o ./output
     - name: Upload Build Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: smtp-relay-installer
         path: ./output
