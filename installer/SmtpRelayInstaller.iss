@@ -1,0 +1,2 @@
+[Setup]
+AppName=SMTP Relay
