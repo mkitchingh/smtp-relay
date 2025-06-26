@@ -1,3 +1,3 @@
 # SMTP Relay
 
-Windows service + config GUI with GitHub Actions automation.
+Windows SMTP relay with GUI configuration and GitHub Actions automation.
