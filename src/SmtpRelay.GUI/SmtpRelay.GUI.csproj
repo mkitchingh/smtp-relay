@@ -1,8 +1,10 @@
-
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net6.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="MainForm.cs" />
+  </ItemGroup>
 </Project>
