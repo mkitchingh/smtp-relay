@@ -1,3 +1,3 @@
 # SMTP Relay
 
-Includes Windows service and GUI config app.
+Windows service + config GUI with GitHub Actions automation.
