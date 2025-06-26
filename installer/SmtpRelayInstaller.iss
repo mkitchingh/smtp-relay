@@ -16,7 +16,7 @@ Name: "{group}\SMTP Relay Config"; Filename: "{app}\SmtpRelay.GUI.exe"
 Name: "{group}\Uninstall SMTP Relay"; Filename: "{uninstallexe}"
 
 [Run]
-Filename: "sc.exe"; Parameters: "create SmtpRelay binPath= "{app}\SmtpRelay.exe" start= auto"; Flags: runhidden
+Filename: "sc.exe"; Parameters: "create SmtpRelay binPath= '{app}\SmtpRelay.exe' start= auto"; Flags: runhidden
 Filename: "sc.exe"; Parameters: "start SmtpRelay"; Flags: runhidden
 
 [UninstallRun]
