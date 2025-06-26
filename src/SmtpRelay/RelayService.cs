@@ -1,18 +1,22 @@
-
 using System.ServiceProcess;
 
 namespace SmtpRelay
 {
     public class RelayService : ServiceBase
     {
+        public RelayService()
+        {
+            ServiceName = "SmtpRelay";
+        }
+
         protected override void OnStart(string[] args)
         {
-            // TODO: Implement SMTP relay start logic
+            // TODO: Add SMTP relay logic here
         }
 
         protected override void OnStop()
         {
-            // TODO: Implement SMTP relay stop logic
+            // TODO: Cleanup logic here
         }
     }
 }
