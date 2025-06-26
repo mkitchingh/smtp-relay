@@ -55,10 +55,10 @@ namespace SmtpRelay.GUI
             Label lblPass = new Label { Text = "Password", Top = 180, Left = 20, Width = 100 };
             txtPassword = new TextBox { Top = 180, Left = 130, Width = 300, UseSystemPasswordChar = true };
 
-            Label lblIP = new Label { Text = "Allowlist IPs", Top = 220, Left = 20, Width = 100 };
-            txtIPAllow = new TextBox { Top = 220, Left = 130, Width = 300 };
+            Label lblIP = new Label { Text = "Allowlist IPs (comma-separated)", Top = 220, Left = 20, Width = 200 };
+            txtIPAllow = new TextBox { Top = 240, Left = 20, Width = 440, PlaceholderText = "e.g. 192.168.1.100, 10.0.0.0/24" };
 
-            btnSave = new Button { Text = "Save", Top = 270, Left = 130, Width = 100 };
+            btnSave = new Button { Text = "Save", Top = 290, Left = 20, Width = 100 };
             btnSave.Click += (s, e) => SaveSettings();
 
             Controls.AddRange(new Control[] {
@@ -69,10 +69,20 @@ namespace SmtpRelay.GUI
 
         private void SaveSettings()
         {
-            string config = $"host={txtHost.Text}\nport={txtPort.Text}\nssl={chkSsl.Checked}\nuser={txtUsername.Text}\npass={txtPassword.Text}\nipallow={txtIPAllow.Text}";
-            File.WriteAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "SMTPRelay", "config.txt"), config);
-            RestartService();
-            MessageBox.Show("Settings saved and service restarted.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            try
+            {
+                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "SMTPRelay");
+                Directory.CreateDirectory(dir); // Ensure the directory exists
+
+                string config = $"host={txtHost.Text}\nport={txtPort.Text}\nssl={chkSsl.Checked}\nuser={txtUsername.Text}\npass={txtPassword.Text}\nipallow={txtIPAllow.Text}";
+                File.WriteAllText(Path.Combine(dir, "config.txt"), config);
+                RestartService();
+                MessageBox.Show("Settings saved and service restarted.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error saving settings: " + ex.Message);
+            }
         }
 
         private void RestartService()
