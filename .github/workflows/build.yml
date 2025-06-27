@@ -2,36 +2,44 @@ name: Build and Package Installer
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: |
+          dotnet restore ./src/SmtpRelay/SmtpRelay.csproj
+          dotnet restore ./src/SmtpRelay.GUI/SmtpRelay.GUI.csproj
 
-      - name: Publish Windows Service
-        run: dotnet publish ./src/SmtpRelay/SmtpRelay.csproj -c Release -o installer/output/service
+      - name: Build service
+        run: dotnet publish ./src/SmtpRelay/SmtpRelay.csproj -c Release -o ./installer/output/service
 
-      - name: Publish GUI
-        run: dotnet publish ./src/SmtpRelay.GUI/SmtpRelay.GUI.csproj -c Release -o installer/output/gui
+      - name: Build GUI
+        run: dotnet publish ./src/SmtpRelay.GUI/SmtpRelay.GUI.csproj -c Release -o ./installer/output/gui
 
-      - name: Compile Installer with Inno Setup
+      - name: Install Inno Setup
+        run: |
+          choco install innosetup --no-progress --yes
+        shell: powershell
+
+      - name: Package installer
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer\SmtpRelayInstaller.iss"
 
       - name: Upload Installer
         uses: actions/upload-artifact@v4
         with:
-          name: smtp-relay-setup
+          name: SmtpRelaySetup
           path: installer/SmtpRelaySetup.exe
