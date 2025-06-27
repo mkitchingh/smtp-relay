@@ -1,1 +1,0 @@
-; Inno Setup script with /debug support and service registration
