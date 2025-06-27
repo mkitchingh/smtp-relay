@@ -1,2 +1,3 @@
 # SMTP Relay
-A Windows SMTP relay service with GUI configuration.
+
+A Windows service and GUI tool to relay mail securely.
