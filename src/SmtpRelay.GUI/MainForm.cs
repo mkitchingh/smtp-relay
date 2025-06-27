@@ -2,11 +2,11 @@ using System.Windows.Forms;
 
 namespace SmtpRelay.GUI
 {
-    public class MainForm : Form
+    public partial class MainForm : Form
     {
         public MainForm()
         {
-            Text = "SMTP Relay Config";
+            InitializeComponent();
         }
     }
 }
