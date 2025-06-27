@@ -1,6 +1,4 @@
-using System;
 using System.ServiceProcess;
-using System.Diagnostics;
 
 namespace SmtpRelay
 {
@@ -8,17 +6,17 @@ namespace SmtpRelay
     {
         public RelayService()
         {
-            ServiceName = "SMTPRelay";
+            ServiceName = "SMTPRelayService";
         }
 
         protected override void OnStart(string[] args)
         {
-            EventLog.WriteEntry("SMTP Relay Service Started.");
+            // Service logic here
         }
 
         protected override void OnStop()
         {
-            EventLog.WriteEntry("SMTP Relay Service Stopped.");
+            // Cleanup logic
         }
     }
 }
