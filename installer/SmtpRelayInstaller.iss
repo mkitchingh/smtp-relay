@@ -9,8 +9,8 @@ SolidCompression=yes
 PrivilegesRequired=admin
 
 [Files]
-Source: "output\service\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
-Source: "output\gui\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+Source: "..\installer\output\service\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+Source: "..\installer\output\gui\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 
 [Icons]
 Name: "{group}\SMTP Relay Config"; Filename: "{app}\SmtpRelay.GUI.exe"
