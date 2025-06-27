@@ -1,30 +1,34 @@
 name: Build and Package Installer
-on: [push]
+
+on:
+  push:
+    branches: [main]
+
 jobs:
   build:
     runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
 
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v3
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore ./src/SmtpRelay/SmtpRelay.csproj
+        run: dotnet restore
 
-      - name: Build
-        run: dotnet build ./src/SmtpRelay/SmtpRelay.csproj --configuration Release
-
-      - name: Publish Service
-        run: dotnet publish ./src/SmtpRelay/SmtpRelay.csproj -c Release -o ./installer/output/service
+      - name: Publish Windows Service
+        run: dotnet publish ./src/SmtpRelay/SmtpRelay.csproj -c Release -o installer/output/service
 
       - name: Publish GUI
-        run: dotnet publish ./src/SmtpRelay.GUI/SmtpRelay.GUI.csproj -c Release -o ./installer/output/gui
+        run: dotnet publish ./src/SmtpRelay.GUI/SmtpRelay.GUI.csproj -c Release -o installer/output/gui
 
-      - name: Run Inno Setup
-        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer\SmtpRelayInstaller.iss"'
+      - name: Compile Installer with Inno Setup
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer\SmtpRelayInstaller.iss"
 
       - name: Upload Installer
         uses: actions/upload-artifact@v4
