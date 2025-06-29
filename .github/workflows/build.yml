@@ -1,45 +1,52 @@
-name: Build and Package Installer
+name: Build & Package SMTP Relay
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  pull_request:
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up .NET
+      - name: Set up .NET 8
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore dependencies
-        run: |
-          dotnet restore ./src/SmtpRelay/SmtpRelay.csproj
-          dotnet restore ./src/SmtpRelay.GUI/SmtpRelay.GUI.csproj
+      - name: Build solution
+        run: dotnet build SMTPRelay.sln -c Release --no-restore
 
-      - name: Build service
-        run: dotnet publish ./src/SmtpRelay/SmtpRelay.csproj -c Release -o ./installer/output/service
+      # ---- Service (self-contained single file, no trim) ------------
+      - name: Publish Service
+        run: >
+          dotnet publish src/SmtpRelay/SmtpRelay.csproj
+          -c Release
+          -r win-x64
+          -p:SelfContained=true
+          -p:PublishSingleFile=true
+          -o installer/output/service
 
-      - name: Build GUI
-        run: dotnet publish ./src/SmtpRelay.GUI/SmtpRelay.GUI.csproj -c Release -o ./installer/output/gui
+      # ---- GUI (already self-contained) -----------------------------
+      - name: Publish GUI
+        run: >
+          dotnet publish src/SmtpRelay.GUI/SmtpRelay.GUI.csproj
+          -c Release
+          -r win-x64
+          -p:SelfContained=true
+          -p:PublishSingleFile=true
+          -o installer/output/gui
 
-      - name: Install Inno Setup
-        run: |
-          choco install innosetup --no-progress --yes
-        shell: powershell
+      # ---- Compile Inno Setup --------------------------------------
+      - name: Compile installer
+        run: '& "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer\\SmtpRelayInstaller.iss'
 
-      - name: Package installer
-        run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer\SmtpRelayInstaller.iss"
-
-      - name: Upload Installer
+      # ---- Upload installer EXE ------------------------------------
+      - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: SmtpRelaySetup
-          path: installer/SmtpRelaySetup.exe
+          name: SMTP-Relay-Installer
+          path: installer/Output/*.exe
