@@ -1,6 +1,8 @@
 [Setup]
 AppName=SMTP Relay
-AppVersion=1.3
+AppVersion=1.4
+AppPublisher=SMTP Relay Project
+AppPublisherURL=https://github.com/mkitchingh/Smtp-Relay
 DefaultDirName={pf64}\SMTP Relay
 ArchitecturesInstallIn64BitMode=x64
 DefaultGroupName=SMTP Relay
@@ -10,7 +12,7 @@ Compression=lzma
 SolidCompression=yes
 
 SetupIconFile="{#SourcePath}\smtp.ico"
-UninstallDisplayIcon={app}\gui\SmtpRelay.GUI.exe   ; envelope icon in Apps & Features
+UninstallDisplayIcon={app}\gui\SmtpRelay.GUI.exe        ; envelope icon
 
 DisableDirPage=yes
 DisableProgramGroupPage=yes
@@ -20,10 +22,9 @@ Source: "output\service\*"; DestDir: "{app}\service"; Flags: ignoreversion recur
 Source: "output\gui\*";    DestDir: "{app}\gui";    Flags: ignoreversion recursesubdirs
 
 [Run]
-; note the doubled quotes inside Parameters
 Filename: "sc.exe"; Parameters: "create ""SMTPRelayService"" binPath=""{app}\service\SmtpRelay.exe"" start=auto"; Flags: runhidden
 Filename: "sc.exe"; Parameters: "start ""SMTPRelayService"""; Flags: runhidden
-Filename: "{app}\gui\SmtpRelay.GUI.exe"; Description: "Launch SMTP Relay Config"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\gui\SmtpRelay.GUI.exe"; Description: "Open SMTP Relay Config"; Flags: nowait postinstall skipifsilent
 
 [Icons]
 Name: "{group}\SMTP Relay Config"; Filename: "{app}\gui\SmtpRelay.GUI.exe"; WorkingDir: "{app}\gui"; IconFilename: "{app}\gui\SmtpRelay.GUI.exe"
