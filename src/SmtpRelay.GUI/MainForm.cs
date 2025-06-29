@@ -12,82 +12,88 @@ namespace SmtpRelay.GUI
         RadioButton allowAll, allowListed;
         CheckBox starttls, enableLog;
         NumericUpDown keepDays;
-        Button btnSave, btnRestart;
+        Button btnSave, btnClose;
 
-        public MainForm()
-        {
-            InitializeComponent();
-            LoadCfg();
-        }
+        public MainForm() { InitializeComponent(); LoadCfg(); }
 
-        Label L(int x, int y, string t) => new Label { Left = x, Top = y, Text = t, AutoSize = true };
+        Label L(int x, int y, string t) => new() { Left = x, Top = y, Text = t, AutoSize = true };
 
         void InitializeComponent()
         {
             Controls.Clear();
+            Width = 940; Height = 560; Text = "SMTP Relay Config";
+            Icon  = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
-            Width = 900;
-            Height = 540;
-            Text = "SMTP Relay Config";
-            Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            int lblX = 32, inX = 220, y = 32, h = 36, gap = 18;
 
-            int lblX = 32, inX = 200, y = 32, h = 36, gap = 18;
+            Controls.Add(L(lblX, y+8, "SMTP Host:"));
+            host = new() { Left = inX, Top = y, Width = 560 }; Controls.Add(host);
 
-            Controls.Add(L(lblX, y + 8, "SMTP Host:"));
-            host = new TextBox { Left = inX, Top = y, Width = 540 }; Controls.Add(host);
+            y += h+gap;
+            Controls.Add(L(lblX, y+8, "Port:"));
+            port = new() { Left = inX, Top = y, Width = 90 }; Controls.Add(port);
 
-            y += h + gap;
-            Controls.Add(L(lblX, y + 8, "Port:"));
-            port = new TextBox { Left = inX, Top = y, Width = 90 }; Controls.Add(port);
-            starttls = new CheckBox { Left = inX + 120, Top = y + 4, Text = "STARTTLS", AutoSize = true };
-            Controls.Add(starttls);
+            starttls = new() { Left = inX+120, Top = y+4, Text = "STARTTLS", AutoSize = true };
+            starttls.CheckedChanged += (_, _) => ToggleAuthFields(); Controls.Add(starttls);
 
-            y += h + gap;
-            Controls.Add(L(lblX, y + 8, "Username:"));
-            user = new TextBox { Left = inX, Top = y, Width = 300 }; Controls.Add(user);
+            y += h+gap;
+            Controls.Add(L(lblX, y+8, "Username:"));
+            user = new() { Left = inX, Top = y, Width = 260 }; Controls.Add(user);
 
-            y += h + gap;
-            Controls.Add(L(lblX, y + 8, "Password:"));
-            pass = new TextBox { Left = inX, Top = y, Width = 300, UseSystemPasswordChar = true };
-            Controls.Add(pass);
+            y += h+gap;
+            Controls.Add(L(lblX, y+8, "Password:"));
+            pass = new() { Left = inX, Top = y, Width = 260, UseSystemPasswordChar = true }; Controls.Add(pass);
 
-            y += h + gap;
-            Controls.Add(L(lblX, y + 8, "Relay Restrictions:"));
-            allowAll    = new RadioButton { Left = inX,       Top = y + 6, Text = "Allow All",       AutoSize = true };
-            allowListed = new RadioButton { Left = inX + 150, Top = y + 6, Text = "Allow Specified", AutoSize = true };
-            Controls.AddRange(new Control[] { allowAll, allowListed });
+            y += h+gap;
+            Controls.Add(L(lblX, y+8, "Relay Restrictions:"));
+            allowAll    = new() { Left = inX,        Top = y+6, Text = "Allow All",       AutoSize = true };
+            allowListed = new() { Left = inX+150,    Top = y+6, Text = "Allow Specified", AutoSize = true };
+            allowAll.CheckedChanged    += (_, _) => ToggleIPField();
+            allowListed.CheckedChanged += (_, _) => ToggleIPField();
+            Controls.AddRange(new Control[]{ allowAll, allowListed });
 
-            y += h + gap;
-            Controls.Add(L(lblX, y + 8, "IP Allowed List:"));
-            ips = new TextBox { Left = inX, Top = y, Width = 600 }; Controls.Add(ips);
+            y += h+gap;
+            Controls.Add(L(lblX, y+8, "IP Allowed List:"));
+            ips = new() { Left = inX, Top = y, Width = 610 };
+            ips.ToolTip("Example: 192.168.1.0/24, 10.0.0.5, 2001:db8::/32"); Controls.Add(ips);
 
-            y += h + gap;
-            Controls.Add(L(lblX, y + 8, "Logging:"));
-            enableLog = new CheckBox { Left = inX, Top = y + 4, Text = "Enable Logging", AutoSize = true };
-            Controls.Add(enableLog);
-
-            Controls.Add(L(inX + 200, y + 8, "Days kept:"));
-            keepDays = new NumericUpDown
-            {
-                Left = inX + 320,   // shifted right to clear label
-                Top  = y,
-                Width = 120,
-                Minimum = 1,
-                Maximum = 365,
-                Value = 30
-            };
+            y += h+gap;
+            Controls.Add(L(lblX, y+8, "Logging:"));
+            enableLog = new() { Left = inX, Top = y+4, Text = "Enable Logging", AutoSize = true }; Controls.Add(enableLog);
+            Controls.Add(L(inX+210, y+8, "Days kept:"));
+            keepDays = new() { Left = inX+310, Top = y, Width = 120, Minimum = 1, Maximum = 365, Value = 30 };
             Controls.Add(keepDays);
 
-            y += h + gap * 2;
-            btnSave    = new Button { Left = inX,         Top = y, Width = 200, Height = 45, Text = "Save" };
-            btnRestart = new Button { Left = inX + 240,   Top = y, Width = 200, Height = 45, Text = "Restart" };
-            Controls.AddRange(new Control[] { btnSave, btnRestart });
+            y += h+gap*2;
+            btnSave = new() { Left = inX, Top = y, Width = 200, Height = 45, Text = "Save" };
+            btnClose = new() { Left = inX+240, Top = y, Width = 200, Height = 45, Text = "Close" };
+            btnSave.Click  += SaveCfg;
+            btnClose.Click += (_, _) => Close();
+            Controls.AddRange(new Control[]{ btnSave, btnClose });
 
-            btnSave.Click    += SaveCfg;
-            btnRestart.Click += (s, e) => { if (RestartSvc()) MessageBox.Show("Service restarted."); };
-
-            Controls.Add(L(Width - 140, Height - 80, "GUI v1.3"));
+            /* right-side info */
+            Controls.Add(L(Width-260, Height-140, $"Version: 1.4"));
+            var link = new LinkLabel
+            {
+                Left = Width-260,
+                Top  = Height-110,
+                Text = "Project site",
+                AutoSize = true
+            };
+            link.Links.Add(0, link.Text.Length, "https://github.com/mkitchingh/Smtp-Relay");
+            link.LinkClicked += (_, e) => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Link.LinkData.ToString()) { UseShellExecute=true });
+            Controls.Add(link);
         }
+
+        /* helper to set tooltips */
+        void ToolTip(Control c, string text)
+        {
+            var tt = new ToolTip { AutomaticDelay = 200 };
+            tt.SetToolTip(c, text);
+        }
+
+        void ToggleAuthFields() { user.Enabled = pass.Enabled = starttls.Checked; }
+        void ToggleIPField()    { ips.Enabled  = allowListed.Checked; }
 
         void LoadCfg()
         {
@@ -102,6 +108,7 @@ namespace SmtpRelay.GUI
             starttls.Checked = c.UseStartTls;
             enableLog.Checked = c.EnableLogging;
             keepDays.Value = c.RetentionDays;
+            ToggleAuthFields(); ToggleIPField();
         }
 
         void SaveCfg(object? s, EventArgs? e)
@@ -114,34 +121,13 @@ namespace SmtpRelay.GUI
                 Password      = pass.Text,
                 AllowAllIPs   = allowAll.Checked,
                 AllowedIPs    = ips.Text.Split(new[]{',',';'}, StringSplitOptions.RemoveEmptyEntries)
-                                        .Select(s => s.Trim()).ToList(),
+                                        .Select(x => x.Trim()).ToList(),
                 UseStartTls   = starttls.Checked,
                 EnableLogging = enableLog.Checked,
                 RetentionDays = (int)keepDays.Value
             };
             cfg.Save();
-            if (RestartSvc())
-                MessageBox.Show("Settings saved and service restarted.");
-        }
-
-        bool RestartSvc()
-        {
-            try
-            {
-                using var sc = new ServiceController("SMTPRelayService");
-                if (sc.Status != ServiceControllerStatus.Stopped)
-                {
-                    sc.Stop();
-                    sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(10));
-                }
-                sc.Start();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Failed to restart service:\n" + ex.Message);
-                return false;
-            }
+            MessageBox.Show("Settings saved.\nService will continue to run.");
         }
     }
 }
