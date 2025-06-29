@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <OutputType>WinExe</OutputType>
+
+    <!-- single icon file, live in installer folder -->
+    <ApplicationIcon>..\..\installer\smtp.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- no need to include the icon in this project -->
+    <ProjectReference Include="..\\SmtpRelay\\SmtpRelay.csproj" />
+  </ItemGroup>
+
+</Project>
