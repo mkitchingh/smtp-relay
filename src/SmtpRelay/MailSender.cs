@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
-using SmtpServer.Protocol;      // ← needed for IMessageTransaction
 
 namespace SmtpRelay
 {
@@ -12,11 +11,10 @@ namespace SmtpRelay
     {
         public static async Task SendAsync(
             Config cfg,
-            IMessageTransaction txn,
             ReadOnlySequence<byte> buffer,
             CancellationToken ct)
         {
-            /* load MimeMessage from the raw buffer */
+            /* build MimeMessage from the raw buffer */
             var msg = await MimeMessage.LoadAsync(buffer.AsStream(), ct);
 
             using var client = new SmtpClient();
