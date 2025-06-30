@@ -1,21 +1,23 @@
 using System;
-using System.IO;
+using System.Buffers;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NetTools;                         // IPAddressRange
+using NetTools;
+using SmtpServer;
+using SmtpServer.ComponentModel;
+using SmtpServer.Protocol;
+using SmtpServer.Storage;
 
 namespace SmtpRelay
 {
     public class Worker : BackgroundService
     {
-        private readonly ILogger<Worker> _log;
-        private readonly Config _cfg;
-        private readonly IPAddressRange[] _ranges;
+        readonly ILogger<Worker> _log;
+        readonly Config _cfg;
+        readonly IPAddressRange[] _ranges;
 
         public Worker(ILogger<Worker> log)
         {
@@ -25,43 +27,66 @@ namespace SmtpRelay
             _ranges = _cfg.AllowAllIPs
                 ? Array.Empty<IPAddressRange>()
                 : _cfg.AllowedIPs.Select(IPAddressRange.Parse).ToArray();
+
+            if (_cfg.AllowAllIPs)
+                _log.LogInformation("Relay mode: Allow ALL IPs");
+            else
+                _log.LogInformation("Relay mode: Allow {count} range(s)", _ranges.Length);
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stop)
+        protected override Task ExecuteAsync(CancellationToken token)
         {
-            var listener = new TcpListener(IPAddress.Any, 25);
-            listener.Start();
-            _log.LogInformation("SMTP listener on port 25");
+            var opts = new SmtpServerOptionsBuilder()
+                .ServerName("SMTP Relay")
+                .Endpoint(builder => builder.Port(25))
+                .Build();
 
-            while (!stop.IsCancellationRequested)
-            {
-                var client = await listener.AcceptTcpClientAsync(stop);
-                _ = Task.Run(() => HandleClient(client), stop);
-            }
+            var services = new ServiceProvider();
+            services.Add(new RelayStore(_cfg, _ranges, _log));
+
+            var server = new SmtpServer.SmtpServer(opts, services, _log);
+            return server.StartAsync(token);
         }
 
-        private async Task HandleClient(TcpClient client)
+        sealed class RelayStore : MessageStore
         {
-            var ip = (client.Client.RemoteEndPoint as IPEndPoint)?.Address;
-            var allow = _cfg.AllowAllIPs
-                         || (_ranges.Length == 0)          // fallback: empty list means allow
-                         || _ranges.Any(r => r.Contains(ip));
+            readonly Config _cfg;
+            readonly IPAddressRange[] _ranges;
+            readonly ILogger _log;
 
-            using var stream = client.GetStream();
-            using var writer = new StreamWriter(stream) { AutoFlush = true };
-
-            await writer.WriteLineAsync("220 SMTP Relay Ready");
-
-            if (!allow)
+            public RelayStore(Config cfg, IPAddressRange[] ranges, ILogger log)
             {
-                _log.LogWarning("Rejected {ip}", ip);
-                await writer.WriteLineAsync("554 Relay access denied");
-                client.Close();
-                return;
+                _cfg = cfg; _ranges = ranges; _log = log;
             }
 
-            _log.LogInformation("Accepted {ip}", ip);
-            // TODO: continue SMTP conversation
+            public override async Task<SmtpResponse> SaveAsync(
+                ISessionContext ctx, IMessageTransaction txn,
+                ReadOnlySequence<byte> buffer, CancellationToken ct)
+            {
+                var ip = ctx.RemoteEndPoint.Address;
+
+                bool allowed = _cfg.AllowAllIPs ||
+                               (_ranges.Length == 0) ||
+                               _ranges.Any(r => r.Contains(ip));
+
+                if (!allowed)
+                {
+                    _log.LogWarning("DENIED {ip} — not in allow-list", ip);
+                    return SmtpResponse.MailboxUnavailable;   // 550
+                }
+
+                try
+                {
+                    await MailSender.SendAsync(_cfg, txn, buffer, ct);
+                    _log.LogInformation("Relayed mail from {ip}", ip);
+                    return SmtpResponse.Ok;
+                }
+                catch (Exception ex)
+                {
+                    _log.LogError(ex, "Relay failure from {ip}", ip);
+                    return SmtpResponse.TransactionFailed;
+                }
+            }
         }
     }
 }
