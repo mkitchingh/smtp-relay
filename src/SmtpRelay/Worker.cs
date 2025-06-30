@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using NetTools;
 using SmtpServer;
 using SmtpServer.ComponentModel;
-using SmtpServer.Protocol;
+using SmtpServer.Protocol;              // SmtpReplyCode
 using SmtpServer.Storage;
 
 namespace SmtpRelay
@@ -78,7 +78,7 @@ namespace SmtpRelay
                 {
                     _log.LogWarning("DENIED {IP} — not in allow-list", ip);
                     return new SmtpResponse(
-                        StandardSmtpResponseCodes.MailboxUnavailable,
+                        SmtpReplyCode.MailboxUnavailable,    // 550 class
                         "550 Relaying Denied");
                 }
 
