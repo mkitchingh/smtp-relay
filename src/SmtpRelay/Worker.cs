@@ -33,9 +33,7 @@ namespace SmtpRelay
         {
             var options = new SmtpServerOptionsBuilder()
                 .ServerName("SMTP Relay")
-                .Port(25)
-                /* disable reverse DNS lookup to remove 2-s delay */
-                .HostnameResolver(_ => null)
+                .Port(25)                // plaintext listener
                 .Build();
 
             var provider = new ServiceProvider();
