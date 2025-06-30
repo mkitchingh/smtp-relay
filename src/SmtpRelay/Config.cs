@@ -1,51 +1,56 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Windows.Forms;
+using NetTools;
 
 namespace SmtpRelay
 {
-    /// <summary>
-    /// Strong-typed settings persisted to
-    ///   %ProgramData%\SMTP Relay\config.json
-    /// </summary>
     public class Config
     {
-        /* ── SMTP relay target ─────────────────────────── */
-        public string SmartHost      { get; set; } = "smtp.example.com";
-        public int    SmartHostPort  { get; set; } = 25;
-        public bool   UseStartTls    { get; set; } = true;   // ← new checkbox
+        public string  SmartHost      { get; set; } = "";
+        public int     SmartHostPort  { get; set; } = 25;
+        public string  Username       { get; set; } = "";
+        public string  Password       { get; set; } = "";
+        public bool    UseStartTls    { get; set; } = false;
 
-        /* ── Auth (optional) ───────────────────────────── */
-        public string Username       { get; set; } = "";
-        public string Password       { get; set; } = "";
+        public bool    AllowAllIPs    { get; set; } = true;
+        public List<string> AllowedIPs { get; set; } = new();
 
-        /* ── IP relay restrictions ─────────────────────── */
-        public bool            AllowAllIPs { get; set; } = false;
-        public List<string>    AllowedIPs  { get; set; } = new() { "127.0.0.1" };
+        public bool    EnableLogging  { get; set; } = false;
+        public int     RetentionDays  { get; set; } = 30;
 
-        /* ── Logging ───────────────────────────────────── */
-        public bool EnableLogging  { get; set; } = true;
-        public int  RetentionDays  { get; set; } = 30;
+        private static string FilePath =>
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
 
-        /* ── Disk location for the JSON file ───────────── */
-        private static string PathCfg => Path.Combine(
-            System.Environment.GetFolderPath(
-                System.Environment.SpecialFolder.CommonApplicationData),
-            "SMTP Relay", "config.json");
-
-        /* ── Load / Save helpers ───────────────────────── */
-        public static Config Load() =>
-            File.Exists(PathCfg)
-                ? JsonSerializer.Deserialize<Config>(
-                        File.ReadAllText(PathCfg)) ?? new Config()
-                : new Config();
+        public static Config Load()
+        {
+            if (!File.Exists(FilePath))
+                return new Config();
+            return JsonSerializer.Deserialize<Config>(File.ReadAllText(FilePath)) ?? new Config();
+        }
 
         public void Save()
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(PathCfg)!);
+            /* Validate IP / CIDR entries */
+            try
+            {
+                if (!AllowAllIPs)
+                {
+                    foreach (var s in AllowedIPs)
+                        _ = IPAddressRange.Parse(s);   // throws if invalid
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Invalid IP/CIDR in allow-list:\n{s}\n\n{ex.Message}",
+                                "Validation error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw;  // prevent save
+            }
 
-            var opts = new JsonSerializerOptions { WriteIndented = true };
-            File.WriteAllText(PathCfg, JsonSerializer.Serialize(this, opts));
+            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(FilePath, json);
         }
     }
 }
