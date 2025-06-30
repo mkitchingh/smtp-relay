@@ -16,19 +16,17 @@ namespace SmtpRelay
             ReadOnlySequence<byte> buffer,
             CancellationToken ct)
         {
-            /* copy ReadOnlySequence → MemoryStream for MimeKit */
+            /* copy ReadOnlySequence → MemoryStream (C# 12-compatible) */
             using var ms = new MemoryStream();
             foreach (var segment in buffer)
             {
-                var span = segment.Span;
-                await ms.WriteAsync(span, ct);
+                ms.Write(segment.Span);      // sync write avoids C# 13 features
             }
             ms.Position = 0;
 
             var msg = await MimeMessage.LoadAsync(ms, ct);
 
             using var client = new SmtpClient();
-
             await client.ConnectAsync(
                 cfg.SmartHost,
                 cfg.SmartHostPort,
