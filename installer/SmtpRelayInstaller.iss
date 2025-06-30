@@ -1,8 +1,6 @@
 [Setup]
 AppName=SMTP Relay
 AppVersion=1.4
-AppPublisher=SMTP Relay Project
-AppPublisherURL=https://github.com/mkitchingh/Smtp-Relay
 DefaultDirName={pf64}\SMTP Relay
 ArchitecturesInstallIn64BitMode=x64
 DefaultGroupName=SMTP Relay
@@ -12,15 +10,15 @@ Compression=lzma
 SolidCompression=yes
 
 SetupIconFile="{#SourcePath}\smtp.ico"
-UninstallDisplayIcon={app}\smtp.ico          ; <— use the ICO directly
+UninstallDisplayIcon="{app}\smtp.ico"          ; quoted path — Windows shows envelope
 
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 
 [Files]
-Source: "smtp.ico";                DestDir: "{app}";          Flags: ignoreversion
-Source: "output\service\*";        DestDir: "{app}\service";  Flags: ignoreversion recursesubdirs
-Source: "output\gui\*";            DestDir: "{app}\gui";      Flags: ignoreversion recursesubdirs
+Source: "{#SourcePath}\smtp.ico";   DestDir: "{app}";          Flags: ignoreversion
+Source: "output\service\*";         DestDir: "{app}\service";  Flags: ignoreversion recursesubdirs
+Source: "output\gui\*";             DestDir: "{app}\gui";      Flags: ignoreversion recursesubdirs
 
 [Run]
 Filename: "sc.exe"; Parameters: "create ""SMTPRelayService"" binPath=""{app}\service\SmtpRelay.exe"" start=auto"; Flags: runhidden
