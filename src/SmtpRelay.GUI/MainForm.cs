@@ -12,7 +12,8 @@ namespace SmtpRelay.GUI
         RadioButton allowAll, allowListed;
         CheckBox starttls, enableLog;
         NumericUpDown keepDays;
-        Button btnSave, btnClose, btnViewLogs;
+        Button btnSave, btnClose, btnLogs;
+        Label lblInfo;
 
         public MainForm() { InitializeComponent(); LoadCfg(); }
 
@@ -21,13 +22,13 @@ namespace SmtpRelay.GUI
         void InitializeComponent()
         {
             Controls.Clear();
-            Width=960; Height=580; Text="SMTP Relay Config";
+            Width=980; Height=620; Text="SMTP Relay Config";
             Icon=System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
             int lblX=32,inX=230,y=32,h=36,gap=18;
 
             Controls.Add(L(lblX,y+8,"SMTP Host:"));
-            host=new(){Left=inX,Top=y,Width=560};Controls.Add(host);
+            host=new(){Left=inX,Top=y,Width=580};Controls.Add(host);
 
             y+=h+gap;
             Controls.Add(L(lblX,y+8,"Port:"));
@@ -52,30 +53,30 @@ namespace SmtpRelay.GUI
 
             y+=h+gap;
             Controls.Add(L(lblX,y+8,"IP Allowed List:"));
-            ips=new(){Left=inX,Top=y,Width=610};Controls.Add(ips);
+            ips=new(){Left=inX,Top=y,Width=630};Controls.Add(ips);
+            Controls.Add(L(inX,y+28,"Example: 192.168.1.0/24 , 10.0.0.5 , 2001:db8::/32"));
 
-            Controls.Add(L(inX,y+28,"Example: 192.168.1.0/24, 10.0.0.5, 2001:db8::/32"));
-
-            y+=h+gap+22;
+            y+=h+gap+26;
             Controls.Add(L(lblX,y+8,"Logging:"));
             enableLog=new(){Left=inX,Top=y+4,Text="Enable Logging",AutoSize=true};Controls.Add(enableLog);
-
             Controls.Add(L(inX+200,y+8,"Days kept:"));
             keepDays=new(){Left=inX+300,Top=y,Width=120,Minimum=1,Maximum=365,Value=30};Controls.Add(keepDays);
 
-            /* bottom buttons */
-            y+=h+gap*2;
-            btnSave=new(){Left=inX,Top=y,Width=180,Height=45,Text="Save"};
-            btnClose=new(){Left=inX+200,Top=y,Width=180,Height=45,Text="Close"};
-            btnViewLogs=new(){Left=inX+400,Top=y,Width=180,Height=45,Text="View Logs"};
+            /* View logs button directly under Logging */
+            btnLogs=new(){Left=inX,Top=y+40,Width=180,Height=40,Text="View Logs"};
+            btnLogs.Click+=(_,_)=>OpenLogs();Controls.Add(btnLogs);
+
+            /* bottom buttons on right */
+            btnSave=new(){Left=inX+300,Top=y+110,Width=180,Height=45,Text="Save"};
+            btnClose=new(){Left=inX+500,Top=y+110,Width=180,Height=45,Text="Close"};
             btnSave.Click+=SaveCfg;
             btnClose.Click+=(_,_)=>Close();
-            btnViewLogs.Click+=(_,_)=>OpenLogFolder();
-            Controls.AddRange(new Control[]{btnSave,btnClose,btnViewLogs});
+            Controls.AddRange(new Control[]{btnSave,btnClose});
 
-            Controls.Add(L(inX, y+55, "Service will remain running"));
+            lblInfo=L(btnClose.Left,btnClose.Bottom+6,"Service will\nremain running");
+            Controls.Add(lblInfo);
 
-            /* right-side info */
+            /* right info */
             Controls.Add(L(Width-260,Height-140,"Version: 1.4"));
             var link=new LinkLabel{Left=Width-260,Top=Height-110,Text="Project site",AutoSize=true};
             link.Links.Add(0,link.Text.Length,"https://github.com/mkitchingh/Smtp-Relay");
@@ -95,7 +96,8 @@ namespace SmtpRelay.GUI
             allowAll.Checked=c.AllowAllIPs; allowListed.Checked=!c.AllowAllIPs;
             ips.Text=string.Join(",",c.AllowedIPs);
             starttls.Checked=c.UseStartTls; enableLog.Checked=c.EnableLogging;
-            keepDays.Value=c.RetentionDays; ToggleAuth(); ToggleIP();
+            keepDays.Value=c.RetentionDays;
+            ToggleAuth(); ToggleIP();
         }
 
         void SaveCfg(object?_,EventArgs?__)
@@ -125,10 +127,12 @@ namespace SmtpRelay.GUI
             }catch(Exception ex){MessageBox.Show(ex.Message);}
         }
 
-        void OpenLogFolder()
+        void OpenLogs()
         {
-            string logDir=System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"logs");
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer",logDir){UseShellExecute=true});
+            string dir=System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),"SMTP Relay","service","logs");
+            System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo("explorer",dir){UseShellExecute=true});
         }
     }
 }
