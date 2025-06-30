@@ -10,7 +10,7 @@ Compression=lzma
 SolidCompression=yes
 
 SetupIconFile="{#SourcePath}\smtp.ico"
-UninstallDisplayIcon="{app}\smtp.ico"     ; envelope in “Installed Apps”
+UninstallDisplayIcon="{app}\smtp.ico"
 
 DisableDirPage=yes
 DisableProgramGroupPage=yes
