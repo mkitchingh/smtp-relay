@@ -1,4 +1,3 @@
-using System;
 using System.Buffers;
 using System.IO;
 using System.Threading;
@@ -16,15 +15,15 @@ namespace SmtpRelay
             ReadOnlySequence<byte> buffer,
             CancellationToken ct)
         {
-            /* copy ReadOnlySequence → MemoryStream (C# 12-compatible) */
+            /* Copy ReadOnlySequence → MemoryStream (C#-12 compatible) */
             using var ms = new MemoryStream();
             foreach (var segment in buffer)
             {
-                ms.Write(segment.Span);      // sync write avoids C# 13 features
+                ms.Write(segment.Span);
             }
             ms.Position = 0;
 
-            var msg = await MimeMessage.LoadAsync(ms, ct);
+            var message = await MimeMessage.LoadAsync(ms, ct);
 
             using var client = new SmtpClient();
             await client.ConnectAsync(
@@ -36,7 +35,7 @@ namespace SmtpRelay
             if (!string.IsNullOrWhiteSpace(cfg.Username))
                 await client.AuthenticateAsync(cfg.Username, cfg.Password, ct);
 
-            await client.SendAsync(msg, ct);
+            await client.SendAsync(message, ct);
             await client.DisconnectAsync(true, ct);
         }
     }
