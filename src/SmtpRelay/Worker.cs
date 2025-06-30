@@ -14,53 +14,64 @@ using SmtpServer.Storage;
 
 namespace SmtpRelay
 {
+    /// <summary>Background SMTP listener that relays to the smart-host.</summary>
     public class Worker : BackgroundService
     {
-        readonly ILogger<Worker> _log;
-        readonly Config _cfg;
-        readonly IPAddressRange[] _ranges;
+        private readonly ILogger<Worker> _log;
+        private readonly Config _cfg;
+        private readonly IPAddressRange[] _ranges;
 
         public Worker(ILogger<Worker> log)
         {
-            _log = log;
-            _cfg = Config.Load();
+            _log  = log;
+            _cfg  = Config.Load();
             _ranges = _cfg.AllowAllIPs
                 ? Array.Empty<IPAddressRange>()
                 : _cfg.AllowedIPs.Select(IPAddressRange.Parse).ToArray();
+
+            _log.LogInformation(_cfg.AllowAllIPs
+                ? "Relay mode: Allow ALL IPs"
+                : "Relay mode: Allow {Count} range(s)", _ranges.Length);
         }
 
         protected override Task ExecuteAsync(CancellationToken token)
         {
-            var opts = new SmtpServerOptionsBuilder()
+            var options = new SmtpServerOptionsBuilder()
                 .ServerName("SMTP Relay")
-                .Port(25)
+                .Port(25)                                // plaintext port
                 .Build();
 
             var provider = new ServiceProvider();
             provider.Add(new RelayStore(_cfg, _ranges, _log));
 
-            var server = new SmtpServer.SmtpServer(opts, provider);
+            var server = new SmtpServer.SmtpServer(options, provider);
             _log.LogInformation("SMTP Relay listening on port 25");
             return server.StartAsync(token);
         }
 
-        /* ── Message store that enforces allow-list and forwards via MailKit ── */
-        sealed class RelayStore : MessageStore
+        /*─────────────────────────  INNER MESSAGE STORE  ─────────────────────────*/
+        private sealed class RelayStore : MessageStore
         {
-            readonly Config _cfg;
-            readonly IPAddressRange[] _ranges;
-            readonly ILogger _log;
+            private readonly Config _cfg;
+            private readonly IPAddressRange[] _ranges;
+            private readonly ILogger _log;
+
             public RelayStore(Config cfg, IPAddressRange[] ranges, ILogger log)
-            { _cfg = cfg; _ranges = ranges; _log = log; }
+            {
+                _cfg = cfg; _ranges = ranges; _log = log;
+            }
 
             public override async Task<SmtpResponse> SaveAsync(
-                ISessionContext ctx, IMessageTransaction txn,
-                ReadOnlySequence<byte> data, CancellationToken ct)
+                ISessionContext ctx,
+                IMessageTransaction txn,
+                ReadOnlySequence<byte> buffer,
+                CancellationToken ct)
             {
-                /* remote IP from session properties */
+                // Extract remote IP stored by SmtpServer
                 IPAddress? ip = null;
                 if (ctx.Properties.TryGetValue("SessionRemoteEndPoint", out var epObj) &&
-                    epObj is IPEndPoint iep) ip = iep.Address;
+                    epObj is IPEndPoint ep)
+                    ip = ep.Address;
 
                 bool allowed = _cfg.AllowAllIPs ||
                                _ranges.Length == 0 ||
@@ -68,19 +79,20 @@ namespace SmtpRelay
 
                 if (!allowed)
                 {
-                    _log.LogWarning("DENIED {ip} — not in allow-list", ip);
-                    return SmtpResponse.MailboxUnavailable;   // 550
+                    _log.LogWarning("DENIED {IP} — not in allow-list", ip);
+                    return SmtpResponse.MailboxUnavailable;      // 550
                 }
 
                 try
                 {
-                    await MailSender.SendAsync(_cfg, txn, data, ct);
-                    _log.LogInformation("Relayed mail from {ip}", ip);
+                    // Forward message via smart-host
+                    await MailSender.SendAsync(_cfg, buffer, ct);
+                    _log.LogInformation("Relayed mail from {IP}", ip);
                     return SmtpResponse.Ok;
                 }
                 catch (Exception ex)
                 {
-                    _log.LogError(ex, "Relay failure from {ip}", ip);
+                    _log.LogError(ex, "Relay failure from {IP}", ip);
                     return SmtpResponse.TransactionFailed;
                 }
             }
