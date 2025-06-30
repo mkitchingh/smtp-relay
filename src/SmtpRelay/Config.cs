@@ -8,37 +8,31 @@ namespace SmtpRelay
 {
     public class Config
     {
-        /* ── SMTP relay settings ───────────────────────────────────── */
         public string SmartHost     { get; set; } = "";
         public int    SmartHostPort { get; set; } = 25;
         public string Username      { get; set; } = "";
         public string Password      { get; set; } = "";
         public bool   UseStartTls   { get; set; } = false;
 
-        /* ── IP allow-list ──────────────────────────────────────────── */
-        public bool AllowAllIPs      { get; set; } = true;
+        public bool AllowAllIPs       { get; set; } = true;
         public List<string> AllowedIPs { get; set; } = new();
 
-        /* ── Logging ───────────────────────────────────────────────── */
         public bool EnableLogging  { get; set; } = false;
         public int  RetentionDays  { get; set; } = 30;
 
-        /* ── load / save ───────────────────────────────────────────── */
-        private static string FilePath =>
+        /*───────── persistence ─────────*/
+        static string FilePath =>
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
 
         public static Config Load()
         {
-            if (!File.Exists(FilePath))
-                return new Config();
-
+            if (!File.Exists(FilePath)) return new();
             return JsonSerializer.Deserialize<Config>(
-                       File.ReadAllText(FilePath)) ?? new Config();
+                       File.ReadAllText(FilePath)) ?? new();
         }
 
         public void Save()
         {
-            /* Validate IP / CIDR entries */
             if (!AllowAllIPs)
             {
                 foreach (var entry in AllowedIPs)
@@ -47,7 +41,7 @@ namespace SmtpRelay
                     catch (Exception ex)
                     {
                         throw new FormatException(
-                            $"Invalid IP or CIDR: \"{entry}\"\n{ex.Message}");
+                            $"Invalid IP or CIDR \"{entry}\".\n{ex.Message}");
                     }
                 }
             }
