@@ -1,4 +1,5 @@
 using System;
+using System.IO;                             // ← added for IOException & Path
 using System.Linq;
 using System.Security.Principal;
 using System.ServiceProcess;
@@ -19,7 +20,7 @@ namespace SmtpRelay.GUI
 
         public MainForm()
         {
-            // Require elevation before anything else
+            // Require elevation
             if (!IsAdministrator())
             {
                 MessageBox.Show(
@@ -34,15 +35,16 @@ namespace SmtpRelay.GUI
 
         static bool IsAdministrator()
         {
-            using var id = WindowsIdentity.GetCurrent();
-            return new WindowsPrincipal(id).IsInRole(WindowsBuiltInRole.Administrator);
+            using var id = System.Security.Principal.WindowsIdentity.GetCurrent();
+            return new System.Security.Principal.WindowsPrincipal(id)
+                   .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
         }
 
-        // ── Build the UI ─────────────────────────────────────────
+        // ── Build UI ────────────────────────────────────────────
         void InitializeComponent()
         {
             Controls.Clear();
-            Width = 1020;  Height = 720;
+            Width = 1020; Height = 720;
             Text = "SMTP Relay Config";
             Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
@@ -53,7 +55,7 @@ namespace SmtpRelay.GUI
             host = new() { Left = inX, Top = y, Width = 600 };
             Controls.Add(host);
 
-            // Port + STARTTLS checkbox
+            // Port + STARTTLS
             y += h + gap;
             Controls.Add(L(lblX, y+8, "Port:"));
             port = new() { Left = inX, Top = y, Width = 90 };
@@ -88,7 +90,7 @@ namespace SmtpRelay.GUI
             Controls.Add(L(lblX, y+8, "IP Allowed List:"));
             ips = new() { Left = inX, Top = y, Width = 650 };
             Controls.Add(ips);
-            Controls.Add(L(inX, y+28, 
+            Controls.Add(L(inX, y+28,
                 "Example: 192.168.1.0/24 , 10.0.0.5 , 2001:db8::/32"));
 
             // Logging
@@ -106,8 +108,8 @@ namespace SmtpRelay.GUI
             Controls.Add(btnLogs);
 
             // Save / Close (shifted far left)
-            btnSave  = new() { Left = lblX,        Top = y+120, Width = 200, Height = 48, Text = "Save"  };
-            btnClose = new() { Left = lblX + 220,  Top = y+120, Width = 200, Height = 48, Text = "Close" };
+            btnSave  = new() { Left = lblX,      Top = y+120, Width = 200, Height = 48, Text = "Save"  };
+            btnClose = new() { Left = lblX + 220, Top = y+120, Width = 200, Height = 48, Text = "Close" };
             btnSave.Click  += SaveCfg;
             btnClose.Click += (_,_) => Close();
             Controls.AddRange(new[] { btnSave, btnClose });
@@ -133,7 +135,7 @@ namespace SmtpRelay.GUI
 
         // ── Helpers ──────────────────────────────────────────
         void ToggleAuth() => user.Enabled = pass.Enabled = starttls.Checked;
-        void ToggleIP()   => ips.Enabled = allowListed.Checked;
+        void ToggleIP()   => ips.Enabled  = allowListed.Checked;
 
         void StarttlsChanged(object? _, EventArgs? __)
         {
@@ -160,8 +162,7 @@ namespace SmtpRelay.GUI
             starttls.Checked   = c.UseStartTls;
             enableLog.Checked  = c.EnableLogging;
             keepDays.Value     = c.RetentionDays;
-            ToggleAuth();
-            ToggleIP();
+            ToggleAuth(); ToggleIP();
         }
 
         void SaveCfg(object? _, EventArgs? __)
@@ -174,8 +175,8 @@ namespace SmtpRelay.GUI
                 Password      = pass.Text,
                 AllowAllIPs   = allowAll.Checked,
                 AllowedIPs    = ips.Text
-                                 .Split(new[]{',',';'}, StringSplitOptions.RemoveEmptyEntries)
-                                 .Select(s => s.Trim()).ToList(),
+                                   .Split(new[]{',',';'}, StringSplitOptions.RemoveEmptyEntries)
+                                   .Select(s => s.Trim()).ToList(),
                 UseStartTls   = starttls.Checked,
                 EnableLogging = enableLog.Checked,
                 RetentionDays = (int)keepDays.Value
