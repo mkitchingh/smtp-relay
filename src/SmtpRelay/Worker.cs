@@ -14,7 +14,6 @@ using SmtpServer.Storage;
 
 namespace SmtpRelay
 {
-    /// <summary>Background SMTP listener that relays to the smart-host.</summary>
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _log;
@@ -23,8 +22,8 @@ namespace SmtpRelay
 
         public Worker(ILogger<Worker> log)
         {
-            _log  = log;
-            _cfg  = Config.Load();
+            _log = log;
+            _cfg = Config.Load();
             _ranges = _cfg.AllowAllIPs
                 ? Array.Empty<IPAddressRange>()
                 : _cfg.AllowedIPs.Select(IPAddressRange.Parse).ToArray();
@@ -38,7 +37,7 @@ namespace SmtpRelay
         {
             var options = new SmtpServerOptionsBuilder()
                 .ServerName("SMTP Relay")
-                .Port(25)                                // plaintext port
+                .Port(25)                              // plaintext listener
                 .Build();
 
             var provider = new ServiceProvider();
@@ -46,10 +45,11 @@ namespace SmtpRelay
 
             var server = new SmtpServer.SmtpServer(options, provider);
             _log.LogInformation("SMTP Relay listening on port 25");
+
             return server.StartAsync(token);
         }
 
-        /*─────────────────────────  INNER MESSAGE STORE  ─────────────────────────*/
+        /*──────────────────────── MessageStore ────────────────────────*/
         private sealed class RelayStore : MessageStore
         {
             private readonly Config _cfg;
@@ -67,10 +67,9 @@ namespace SmtpRelay
                 ReadOnlySequence<byte> buffer,
                 CancellationToken ct)
             {
-                // Extract remote IP stored by SmtpServer
                 IPAddress? ip = null;
-                if (ctx.Properties.TryGetValue("SessionRemoteEndPoint", out var epObj) &&
-                    epObj is IPEndPoint ep)
+                if (ctx.Properties.TryGetValue("SessionRemoteEndPoint", out var obj) &&
+                    obj is IPEndPoint ep)
                     ip = ep.Address;
 
                 bool allowed = _cfg.AllowAllIPs ||
@@ -80,12 +79,12 @@ namespace SmtpRelay
                 if (!allowed)
                 {
                     _log.LogWarning("DENIED {IP} — not in allow-list", ip);
-                    return SmtpResponse.MailboxUnavailable;      // 550
+                    return new SmtpResponse(StandardSmtpResponseCodes.MailboxUnavailable,
+                                            "550 Relaying Denied");
                 }
 
                 try
                 {
-                    // Forward message via smart-host
                     await MailSender.SendAsync(_cfg, buffer, ct);
                     _log.LogInformation("Relayed mail from {IP}", ip);
                     return SmtpResponse.Ok;
