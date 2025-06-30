@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using NetTools;
 using SmtpServer;
 using SmtpServer.ComponentModel;
-using SmtpServer.Protocol;              // SmtpReplyCode
+using SmtpServer.Protocol;
 using SmtpServer.Storage;
 
 namespace SmtpRelay
@@ -27,10 +27,6 @@ namespace SmtpRelay
             _ranges = _cfg.AllowAllIPs
                 ? Array.Empty<IPAddressRange>()
                 : _cfg.AllowedIPs.Select(IPAddressRange.Parse).ToArray();
-
-            _log.LogInformation(_cfg.AllowAllIPs
-                ? "Relay mode: Allow ALL IPs"
-                : "Relay mode: Allow {Count} range(s)", _ranges.Length);
         }
 
         protected override Task ExecuteAsync(CancellationToken token)
@@ -38,17 +34,22 @@ namespace SmtpRelay
             var options = new SmtpServerOptionsBuilder()
                 .ServerName("SMTP Relay")
                 .Port(25)
+                /* disable reverse DNS lookup to remove 2-s delay */
+                .HostnameResolver(_ => null)
                 .Build();
 
             var provider = new ServiceProvider();
             provider.Add(new RelayStore(_cfg, _ranges, _log));
 
-            var server = new SmtpServer.SmtpServer(options, provider);
-            _log.LogInformation("SMTP Relay listening on port 25");
-            return server.StartAsync(token);
+            _log.LogInformation(_cfg.AllowAllIPs
+                ? "Relay mode: Allow ALL IPs"
+                : "Relay mode: Allow {Count} range(s)", _ranges.Length);
+
+            return new SmtpServer.SmtpServer(options, provider)
+                .StartAsync(token);
         }
 
-        /*─────────────────── message store enforcing allow-list ───────────────────*/
+        /*────────────── message store enforcing allow-list ──────────────*/
         sealed class RelayStore : MessageStore
         {
             readonly Config _cfg;
@@ -62,13 +63,12 @@ namespace SmtpRelay
 
             public override async Task<SmtpResponse> SaveAsync(
                 ISessionContext ctx,
-                IMessageTransaction txn,
+                IMessageTransaction _,
                 ReadOnlySequence<byte> buffer,
                 CancellationToken ct)
             {
-                IPAddress? ip = null;
-                if (ctx.Properties.TryGetValue("SessionRemoteEndPoint", out var obj) &&
-                    obj is IPEndPoint ep) ip = ep.Address;
+                var ip = (ctx.Properties.TryGetValue("SessionRemoteEndPoint", out var o)
+                          && o is IPEndPoint ep) ? ep.Address : null;
 
                 bool allowed = _cfg.AllowAllIPs ||
                                _ranges.Length == 0 ||
@@ -78,8 +78,7 @@ namespace SmtpRelay
                 {
                     _log.LogWarning("DENIED {IP} — not in allow-list", ip);
                     return new SmtpResponse(
-                        SmtpReplyCode.MailboxUnavailable,    // 550 class
-                        "550 Relaying Denied");
+                        SmtpReplyCode.MailboxUnavailable, "550 Relaying Denied");
                 }
 
                 try
