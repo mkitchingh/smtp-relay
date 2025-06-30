@@ -20,34 +20,42 @@ namespace SmtpRelay
         public bool EnableLogging { get; set; } = false;
         public int  RetentionDays { get; set; } = 30;
 
-        static string FilePath =>
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
+        // Shared path under Program Files\SMTP Relay\config.json
+        private static string FilePath
+        {
+            get
+            {
+                var baseDir = Environment.GetFolderPath(
+                    Environment.SpecialFolder.ProgramFiles);
+                var dir     = Path.Combine(baseDir, "SMTP Relay");
+                Directory.CreateDirectory(dir);
+                return Path.Combine(dir, "config.json");
+            }
+        }
 
         public static Config Load()
         {
-            if (!File.Exists(FilePath)) return new Config();
-            return JsonSerializer.Deserialize<Config>(File.ReadAllText(FilePath))
-                   ?? new Config();
+            var path = FilePath;
+            if (!File.Exists(path)) return new Config();
+            return JsonSerializer
+                .Deserialize<Config>(File.ReadAllText(path))
+                ?? new Config();
         }
 
-        /// <summary>Validate & persist configuration.</summary>
-        /// <exception cref="FormatException">if SmartHost empty or any IP/CIDR is invalid</exception>
-        /// <exception cref="IOException">if writing the file fails (e.g. no permission)</exception>
+        /// <summary>
+        /// Validates and saves the config to the shared path.
+        /// Throws FormatException on invalid entries, IOException on write failure.
+        /// </summary>
         public void Save()
         {
-            // Must have a non-empty SMTP host
             if (string.IsNullOrWhiteSpace(SmartHost))
                 throw new FormatException("SMTP Host must not be empty.");
 
-            // Validate each IP/CIDR entry
             if (!AllowAllIPs)
             {
                 foreach (var entry in AllowedIPs)
                 {
-                    try
-                    {
-                        _ = IPAddressRange.Parse(entry);
-                    }
+                    try { _ = IPAddressRange.Parse(entry); }
                     catch (Exception ex)
                     {
                         throw new FormatException(
@@ -56,16 +64,18 @@ namespace SmtpRelay
                 }
             }
 
-            // Ensure directory exists
-            var dir = Path.GetDirectoryName(FilePath)!;
-            Directory.CreateDirectory(dir);
-
             var json = JsonSerializer.Serialize(
-                this,
-                new JsonSerializerOptions { WriteIndented = true });
+                this, new JsonSerializerOptions { WriteIndented = true });
 
-            // Write the file (will throw if permission denied)
-            File.WriteAllText(FilePath, json);
+            try
+            {
+                File.WriteAllText(FilePath, json);
+            }
+            catch (Exception ex)
+            {
+                throw new IOException(
+                    $"Failed to write config file at {FilePath}:\n{ex.Message}");
+            }
         }
     }
 }
