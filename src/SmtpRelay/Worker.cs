@@ -16,9 +16,9 @@ namespace SmtpRelay
 {
     public class Worker : BackgroundService
     {
-        private readonly ILogger<Worker> _log;
-        private readonly Config _cfg;
-        private readonly IPAddressRange[] _ranges;
+        readonly ILogger<Worker> _log;
+        readonly Config _cfg;
+        readonly IPAddressRange[] _ranges;
 
         public Worker(ILogger<Worker> log)
         {
@@ -37,7 +37,7 @@ namespace SmtpRelay
         {
             var options = new SmtpServerOptionsBuilder()
                 .ServerName("SMTP Relay")
-                .Port(25)                              // plaintext listener
+                .Port(25)
                 .Build();
 
             var provider = new ServiceProvider();
@@ -45,16 +45,15 @@ namespace SmtpRelay
 
             var server = new SmtpServer.SmtpServer(options, provider);
             _log.LogInformation("SMTP Relay listening on port 25");
-
             return server.StartAsync(token);
         }
 
-        /*──────────────────────── MessageStore ────────────────────────*/
-        private sealed class RelayStore : MessageStore
+        /*─────────────────── message store enforcing allow-list ───────────────────*/
+        sealed class RelayStore : MessageStore
         {
-            private readonly Config _cfg;
-            private readonly IPAddressRange[] _ranges;
-            private readonly ILogger _log;
+            readonly Config _cfg;
+            readonly IPAddressRange[] _ranges;
+            readonly ILogger _log;
 
             public RelayStore(Config cfg, IPAddressRange[] ranges, ILogger log)
             {
@@ -69,8 +68,7 @@ namespace SmtpRelay
             {
                 IPAddress? ip = null;
                 if (ctx.Properties.TryGetValue("SessionRemoteEndPoint", out var obj) &&
-                    obj is IPEndPoint ep)
-                    ip = ep.Address;
+                    obj is IPEndPoint ep) ip = ep.Address;
 
                 bool allowed = _cfg.AllowAllIPs ||
                                _ranges.Length == 0 ||
@@ -79,8 +77,9 @@ namespace SmtpRelay
                 if (!allowed)
                 {
                     _log.LogWarning("DENIED {IP} — not in allow-list", ip);
-                    return new SmtpResponse(StandardSmtpResponseCodes.MailboxUnavailable,
-                                            "550 Relaying Denied");
+                    return new SmtpResponse(
+                        StandardSmtpResponseCodes.MailboxUnavailable,
+                        "550 Relaying Denied");
                 }
 
                 try
