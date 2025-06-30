@@ -1,4 +1,6 @@
+using System;
 using System.Buffers;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using MailKit.Net.Smtp;
@@ -14,8 +16,16 @@ namespace SmtpRelay
             ReadOnlySequence<byte> buffer,
             CancellationToken ct)
         {
-            /* build MimeMessage from the raw buffer */
-            var msg = await MimeMessage.LoadAsync(buffer.AsStream(), ct);
+            /* copy ReadOnlySequence → MemoryStream for MimeKit */
+            using var ms = new MemoryStream();
+            foreach (var segment in buffer)
+            {
+                var span = segment.Span;
+                await ms.WriteAsync(span, ct);
+            }
+            ms.Position = 0;
+
+            var msg = await MimeMessage.LoadAsync(ms, ct);
 
             using var client = new SmtpClient();
 
