@@ -7,8 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using NetTools;                 // ← correct namespace for IPAddressRange
-using System.Collections.Generic;
+using NetTools;                         // IPAddressRange
 
 namespace SmtpRelay
 {
@@ -16,7 +15,7 @@ namespace SmtpRelay
     {
         private readonly ILogger<Worker> _log;
         private readonly Config _cfg;
-        private readonly IReadOnlyList<IPAddressRange> _ranges;
+        private readonly IPAddressRange[] _ranges;
 
         public Worker(ILogger<Worker> log)
         {
@@ -25,45 +24,44 @@ namespace SmtpRelay
 
             _ranges = _cfg.AllowAllIPs
                 ? Array.Empty<IPAddressRange>()
-                : _cfg.AllowedIPs
-                      .Select(IPAddressRange.Parse)   // IPv4 & IPv6 CIDR / single IP
-                      .ToList();
+                : _cfg.AllowedIPs.Select(IPAddressRange.Parse).ToArray();
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken stop)
         {
             var listener = new TcpListener(IPAddress.Any, 25);
             listener.Start();
-            _log.LogInformation("SMTP listener started on port 25");
+            _log.LogInformation("SMTP listener on port 25");
 
-            while (!stoppingToken.IsCancellationRequested)
+            while (!stop.IsCancellationRequested)
             {
-                var client = await listener.AcceptTcpClientAsync(stoppingToken);
-                _ = Task.Run(() => HandleClient(client), stoppingToken);
+                var client = await listener.AcceptTcpClientAsync(stop);
+                _ = Task.Run(() => HandleClient(client), stop);
             }
         }
 
         private async Task HandleClient(TcpClient client)
         {
-            var remoteIP = (client.Client.RemoteEndPoint as IPEndPoint)?.Address;
-            var allowed  = _cfg.AllowAllIPs || _ranges.Any(r => r.Contains(remoteIP));
+            var ip = (client.Client.RemoteEndPoint as IPEndPoint)?.Address;
+            var allow = _cfg.AllowAllIPs
+                         || (_ranges.Length == 0)          // fallback: empty list means allow
+                         || _ranges.Any(r => r.Contains(ip));
 
             using var stream = client.GetStream();
-            var writer = new StreamWriter(stream) { AutoFlush = true };
+            using var writer = new StreamWriter(stream) { AutoFlush = true };
 
-            // RFC 5321 greeting
             await writer.WriteLineAsync("220 SMTP Relay Ready");
 
-            if (!allowed)
+            if (!allow)
             {
-                _log.LogWarning("Rejected {ip} (not in allow-list)", remoteIP);
+                _log.LogWarning("Rejected {ip}", ip);
                 await writer.WriteLineAsync("554 Relay access denied");
                 client.Close();
                 return;
             }
 
-            _log.LogInformation("Accepted {ip}", remoteIP);
-            // TODO: handle SMTP session (omitted for brevity)
+            _log.LogInformation("Accepted {ip}", ip);
+            // TODO: continue SMTP conversation
         }
     }
 }
