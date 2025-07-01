@@ -1,5 +1,3 @@
-// File: src/SmtpRelay/MailSender.cs
-
 using System;
 using System.IO;
 using System.Buffers;
@@ -29,7 +27,7 @@ namespace SmtpRelay
             // Ensure logs directory exists
             Directory.CreateDirectory(LogDir);
 
-            // Trimmed protocol transcript: smtp-proto-YYYYMMDD.log
+            // Protocol transcript file: smtp-proto-YYYYMMDD.log
             var protoPath = Path.Combine(
                 LogDir,
                 $"smtp-proto-{DateTime.Now:yyyyMMdd}.log");
@@ -44,7 +42,6 @@ namespace SmtpRelay
                     "Connecting to {Host}:{Port} (STARTTLS={Tls})",
                     cfg.SmartHost, cfg.SmartHostPort, cfg.UseStartTls);
 
-                // **Use SecureSocketOptions to distinguish STARTTLS vs. None vs. SslOnConnect**
                 var socketOpts = cfg.UseStartTls
                     ? SecureSocketOptions.StartTls
                     : SecureSocketOptions.None;
@@ -60,9 +57,7 @@ namespace SmtpRelay
                 {
                     Log.Information("Authenticating as {User}", cfg.Username);
                     await client.AuthenticateAsync(
-                            cfg.Username,
-                            cfg.Password,
-                            ct)
+                            cfg.Username, cfg.Password, ct)
                         .ConfigureAwait(false);
                 }
 
