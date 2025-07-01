@@ -1,27 +1,28 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk.Worker">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Core SMTP server engine -->
+    <!-- core SMTP server -->
     <PackageReference Include="SmtpServer" Version="11.0.0" />
 
-    <!-- Relay to smarthost -->
+    <!-- IP/netmask parsing -->
+    <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
+
+    <!-- MIME + SMTP client -->
     <PackageReference Include="MailKit" Version="4.1.0" />
     <PackageReference Include="MimeKit" Version="4.4.0" />
 
-    <!-- Logging -->
-    <PackageReference Include="Serilog" Version="4.2.0" />
+    <!-- Structured logging -->
     <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-
-    <!-- Parse CIDRs -->
-    <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
   </ItemGroup>
-
 </Project>
