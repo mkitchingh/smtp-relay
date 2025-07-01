@@ -2,53 +2,46 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using NetTools; // IPAddressRange
+using IPAddressRange;
 
 namespace SmtpRelay
 {
     public class Config
     {
-        public string SmartHost { get; set; } = "";
-        public int SmartHostPort { get; set; }
-        public string? Username { get; set; }
-        public string? Password { get; set; }
-        public bool UseStartTls { get; set; }
-        public bool AllowAllIPs { get; set; }
-        public List<IPAddressRange> AllowedIPs { get; set; } = new();
-        public bool EnableLogging { get; set; }
-        public int RetentionDays { get; set; }
+        public string SmartHost    { get; set; } = "";
+        public int    SmartHostPort{ get; set; } = 25;
+        public string? Username    { get; set; }
+        public string? Password    { get; set; }
+        public bool   UseStartTls  { get; set; }
+        public bool   AllowAllIPs  { get; set; }
+        public List<string>? AllowedIPs   { get; set; } = new();
+        public bool   EnableLogging      { get; set; }
+        public int    RetentionDays      { get; set; } = 7;
 
-        private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
-        private static string PathConfig =>
-            System.IO.Path.Combine(Program.BaseDir, "config.json");
+        const string FileName = "config.json";
 
         public static Config Load()
         {
-            if (!File.Exists(PathConfig))
-            {
-                var def = new Config
-                {
-                    SmartHost = "smtp.example.com",
-                    SmartHostPort = 25,
-                    UseStartTls = false,
-                    AllowAllIPs = true,
-                    EnableLogging = true,
-                    RetentionDays = 7
-                };
-                Save(def);
-                return def;
-            }
+            if(!File.Exists(FileName))
+                return new Config();
 
-            var json = File.ReadAllText(PathConfig);
-            return JsonSerializer.Deserialize<Config>(json, _jsonOptions)!;
+            var json = File.ReadAllText(FileName);
+            return JsonSerializer.Deserialize<Config>(json)!
+                ?? new Config();
         }
 
-        public static void Save(Config cfg)
+        public void Save()
         {
-            // You could validate cfg.AllowedIPs here if needed
-            var json = JsonSerializer.Serialize(cfg, _jsonOptions);
-            File.WriteAllText(PathConfig, json);
+            if(!AllowAllIPs)
+            {
+                // validate each entry:
+                foreach(var s in AllowedIPs!)
+                    _ = IPAddressRange.Parse(s);
+            }
+
+            var opts = new JsonSerializerOptions { WriteIndented = true };
+            var json = JsonSerializer.Serialize(this, opts);
+            File.WriteAllText(FileName, json);
         }
     }
 }
