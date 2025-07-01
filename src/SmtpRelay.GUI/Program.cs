@@ -8,8 +8,10 @@ namespace SmtpRelay.GUI
         [STAThread]
         static void Main()
         {
-            // .NET 8 WinForms high-DPI and default styles
+            // This wires up high-DPI, visual styles, etc.
             ApplicationConfiguration.Initialize();
+
+            // Launch our MainForm
             Application.Run(new MainForm());
         }
     }
