@@ -2,9 +2,6 @@ namespace SmtpRelay.GUI
 {
     partial class MainForm
     {
-        /// <summary>
-        /// Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
         private System.Windows.Forms.Label labelServiceStatus;
@@ -29,15 +26,10 @@ namespace SmtpRelay.GUI
         private System.Windows.Forms.Label lblVersion;
         private System.Windows.Forms.LinkLabel linkRepo;
 
-        /// <summary>
-        /// Clean up any resources being used.
-        /// </summary>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
-            {
                 components.Dispose();
-            }
             base.Dispose(disposing);
         }
 
@@ -67,7 +59,6 @@ namespace SmtpRelay.GUI
             this.btnClose = new System.Windows.Forms.Button();
             this.lblVersion = new System.Windows.Forms.Label();
             this.linkRepo = new System.Windows.Forms.LinkLabel();
-
             ((System.ComponentModel.ISupportInitialize)(this.numPort)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numDaysKept)).BeginInit();
             this.SuspendLayout();
@@ -85,7 +76,7 @@ namespace SmtpRelay.GUI
             // lblSmtpHost
             // 
             this.lblSmtpHost.AutoSize = true;
-            this.lblSmtpHost.Location = new System.Drawing.Point(12,  forty);
+            this.lblSmtpHost.Location = new System.Drawing.Point(12, 40);
             this.lblSmtpHost.Name = "lblSmtpHost";
             this.lblSmtpHost.Size = new System.Drawing.Size(65, 13);
             this.lblSmtpHost.TabIndex = 1;
@@ -93,7 +84,7 @@ namespace SmtpRelay.GUI
             // 
             // txtSmtpHost
             // 
-            this.txtSmtpHost.Location = new System.Drawing.Point(120,  forty - 3);
+            this.txtSmtpHost.Location = new System.Drawing.Point(120, 37);
             this.txtSmtpHost.Name = "txtSmtpHost";
             this.txtSmtpHost.Size = new System.Drawing.Size(350, 20);
             this.txtSmtpHost.TabIndex = 2;
@@ -220,13 +211,11 @@ namespace SmtpRelay.GUI
             // numDaysKept
             // 
             this.numDaysKept.Location = new System.Drawing.Point(330, 238);
-            this.numDaysKept.Minimum = new decimal(new int[] {
-            1, 0, 0, 0});
+            this.numDaysKept.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             this.numDaysKept.Name = "numDaysKept";
             this.numDaysKept.Size = new System.Drawing.Size(60, 20);
             this.numDaysKept.TabIndex = 15;
-            this.numDaysKept.Value = new decimal(new int[] {
-            30, 0, 0, 0});
+            this.numDaysKept.Value = new decimal(new int[] { 30, 0, 0, 0 });
             // 
             // btnViewLogs
             // 
@@ -281,7 +270,7 @@ namespace SmtpRelay.GUI
             // 
             // MainForm
             // 
-            this.ClientSize = new System.Drawing.Size(500, 360);
+            this.ClientSize = new System.Drawing.Size(540, 370);
             this.Controls.Add(this.linkRepo);
             this.Controls.Add(this.lblVersion);
             this.Controls.Add(this.btnClose);
