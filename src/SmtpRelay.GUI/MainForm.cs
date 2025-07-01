@@ -1,3 +1,5 @@
+// File: src/SmtpRelay.GUI/MainForm.cs
+
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -6,7 +8,6 @@ using System.Linq;
 using System.Reflection;
 using System.ServiceProcess;
 using System.Windows.Forms;
-using System.Management;
 
 namespace SmtpRelay.GUI
 {
@@ -18,7 +19,7 @@ namespace SmtpRelay.GUI
         {
             InitializeComponent();
 
-            // discover the real Windows service name by display name
+            // discover the real Windows service by its display name
             _serviceName = ServiceController
                 .GetServices()
                 .FirstOrDefault(s =>
@@ -63,10 +64,10 @@ namespace SmtpRelay.GUI
         {
             bool en = chkStartTls.Checked;
             lblUsername.Enabled = en;
-            txtUsername.Enabled = en;
-            lblPassword.Enabled = en;
-            txtPassword.Enabled = en;
-            numPort.Value = en ? 587 : 25;
+            txtUsername.Enabled   = en;
+            lblPassword.Enabled   = en;
+            txtPassword.Enabled   = en;
+            numPort.Value         = en ? 587 : 25;
         }
 
         private void radioAllowRestrictions_CheckedChanged(object sender, EventArgs e)
@@ -85,8 +86,9 @@ namespace SmtpRelay.GUI
 
         private void btnSave_Click(object sender, EventArgs e)
         {
-            // existing SaveConfig() logic here...
-            // then restart the Windows service:
+            // --- your existing SaveConfig() calls go here ---
+
+            // restart the Windows service
             try
             {
                 using var sc = new ServiceController(_serviceName);
@@ -97,7 +99,7 @@ namespace SmtpRelay.GUI
                 }
                 sc.Start();
                 sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
-                MessageBox.Show("Settings saved and service restarted.", 
+                MessageBox.Show("Settings saved and service restarted.",
                     "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
@@ -105,6 +107,7 @@ namespace SmtpRelay.GUI
                 MessageBox.Show($"Failed to restart service:\n{ex.Message}",
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+
             UpdateServiceStatus();
         }
 
@@ -114,7 +117,7 @@ namespace SmtpRelay.GUI
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = linkRepo.Text,
+                FileName      = linkRepo.Text,
                 UseShellExecute = true
             });
         }
