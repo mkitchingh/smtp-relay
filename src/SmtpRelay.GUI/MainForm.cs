@@ -5,14 +5,13 @@ using System.IO;
 using System.Linq;
 using System.ServiceProcess;
 using System.Windows.Forms;
-using SmtpRelay;  // core project
 
 namespace SmtpRelay.GUI
 {
     public partial class MainForm : Form
     {
-        // Updated to the actual service name installed on Windows
-        private const string ServiceName = "SMTP Relay Service";
+        // MUST match the actual Windows Service short name
+        private const string ServiceName = "SMTPRelayService";
 
         public MainForm()
         {
@@ -37,7 +36,6 @@ namespace SmtpRelay.GUI
             ToggleAuthFields();
             ToggleIpField();
             ToggleLoggingFields();
-            lblVersion.Text          = $"Version: {Program.AppVersion}";
         }
 
         private void UpdateServiceStatus()
@@ -117,7 +115,7 @@ namespace SmtpRelay.GUI
             try
             {
                 using var sc = new ServiceController(ServiceName);
-                sc.Stop();  sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(10));
+                sc.Stop();  sc.WaitForStatus(ServiceControllerStatus.Stopped,  TimeSpan.FromSeconds(10));
                 sc.Start(); sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(10));
                 MessageBox.Show("Settings saved and service restarted.", "Success",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
