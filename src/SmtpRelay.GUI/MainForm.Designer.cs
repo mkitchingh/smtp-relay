@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -42,7 +43,7 @@ namespace SmtpRelay.GUI
 
         private void InitializeComponent()
         {
-            this.components                 = new System.ComponentModel.Container();
+            this.components                 = new Container();
             this.labelHost                  = new Label();
             this.txtHost                    = new TextBox();
             this.labelPort                  = new Label();
@@ -69,8 +70,8 @@ namespace SmtpRelay.GUI
             this.lblVersion                 = new Label();
             this.linkRepo                   = new LinkLabel();
 
-            ((System.ComponentModel.ISupportInitialize)(this.numPort)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.numRetentionDays)).BeginInit();
+            ((ISupportInitialize)(this.numPort)).BeginInit();
+            ((ISupportInitialize)(this.numRetentionDays)).BeginInit();
             this.SuspendLayout();
 
             // MainForm
@@ -239,8 +240,8 @@ namespace SmtpRelay.GUI
                 this.lblVersion, this.linkRepo
             });
 
-            ((System.ComponentModel.ISupportInitialize)(this.numPort)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.numRetentionDays)).EndInit();
+            ((ISupportInitialize)(this.numPort)).EndInit();
+            ((ISupportInitialize)(this.numRetentionDays)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
         }
