@@ -10,28 +10,20 @@ namespace SmtpRelay
     {
         static void Main(string[] args)
         {
-            // Prepare service & log directories
+            // Shared folders
             var baseDir = Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "SMTP Relay", "service");
             var logDir = Path.Combine(baseDir, "logs");
             Directory.CreateDirectory(logDir);
 
-            // Load retention from the shared config
-            var cfg = Config.Load();
-            var retention = cfg.RetentionDays;
-
-            // Only one combined application + SMTP-event log
-            var logPath = Path.Combine(logDir, "app-.log");
-
-            // Configure Serilog for all events
+            // Serilog: only a single rolling app log
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .WriteTo.File(
-                    logPath,
+                    Path.Combine(logDir, "app-.log"),
                     rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: retention)
+                    retainedFileCountLimit: 7)
                 .CreateLogger();
 
             try
@@ -41,9 +33,7 @@ namespace SmtpRelay
                     .UseWindowsService()
                     .UseSerilog()
                     .ConfigureServices((_, services) =>
-                    {
-                        services.AddHostedService<Worker>();
-                    })
+                        services.AddHostedService<Worker>())
                     .Build()
                     .Run();
             }
