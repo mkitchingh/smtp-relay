@@ -24,36 +24,36 @@ namespace SmtpRelay
         }
 
         public async Task<SmtpResponse> SaveAsync(
-            ISessionContext ctx,
-            IMessageTransaction tx,
+            ISessionContext      context,
+            IMessageTransaction  transaction,
             ReadOnlySequence<byte> buffer,
-            CancellationToken ct)
+            CancellationToken    cancellationToken)
         {
             try
             {
-                // load the MIME message from the raw buffer
+                // parse the incoming message
                 var data = buffer.ToArray();
                 var message = MimeMessage.Load(new MemoryStream(data));
 
-                // relay via MailKit
+                // relay
                 using var client = new SmtpClient();
                 await client.ConnectAsync(
                     _cfg.SmartHost,
                     _cfg.SmartHostPort,
                     _cfg.UseStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto,
-                    ct);
+                    cancellationToken);
 
                 if (!string.IsNullOrEmpty(_cfg.Username))
-                    await client.AuthenticateAsync(_cfg.Username, _cfg.Password, ct);
+                    await client.AuthenticateAsync(_cfg.Username!, _cfg.Password!, cancellationToken);
 
-                await client.SendAsync(message, ct);
-                await client.DisconnectAsync(true, ct);
+                await client.SendAsync(message, cancellationToken);
+                await client.DisconnectAsync(true, cancellationToken);
 
                 return SmtpResponse.Ok;
             }
             catch (Exception ex)
             {
-                _log.Error(ex, "Relay failure from {Remote}", ctx.RemoteEndPoint);
+                _log.Error(ex, "Relay failure from {Remote}", context.RemoteEndPoint);
                 return SmtpResponse.TransactionFailed;
             }
         }
