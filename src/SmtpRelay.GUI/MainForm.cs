@@ -1,8 +1,10 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.ServiceProcess;
 using System.Windows.Forms;
+using SmtpRelay;  // your console/lib project
 
 namespace SmtpRelay.GUI
 {
@@ -28,11 +30,12 @@ namespace SmtpRelay.GUI
             txtPassword.Text         = cfg.Password;
             radioAllowAll.Checked    = cfg.AllowAllIPs;
             radioAllowList.Checked   = !cfg.AllowAllIPs;
-            txtIpList.Text           = string.Join(Environment.NewLine, cfg.AllowedIPs);
+            txtIpList.Lines          = cfg.AllowedIPs;
             chkEnableLogging.Checked = cfg.EnableLogging;
             numRetentionDays.Value   = cfg.RetentionDays;
             ToggleAuthFields();
             ToggleIpField();
+            ToggleLoggingFields();
         }
 
         private void UpdateServiceStatus()
@@ -41,12 +44,8 @@ namespace SmtpRelay.GUI
             {
                 using var sc = new ServiceController(_serviceName);
                 var status = sc.Status;
-                labelServiceStatus.Text = status == ServiceControllerStatus.Running
-                    ? "Running"
-                    : "Stopped";
-                labelServiceStatus.ForeColor = status == ServiceControllerStatus.Running
-                    ? Color.Green
-                    : Color.Red;
+                labelServiceStatus.Text = status == ServiceControllerStatus.Running ? "Running" : "Stopped";
+                labelServiceStatus.ForeColor = status == ServiceControllerStatus.Running ? Color.Green : Color.Red;
             }
             catch
             {
@@ -79,6 +78,11 @@ namespace SmtpRelay.GUI
 
         private void chkEnableLogging_CheckedChanged(object sender, EventArgs e)
         {
+            ToggleLoggingFields();
+        }
+
+        private void ToggleLoggingFields()
+        {
             numRetentionDays.Enabled = chkEnableLogging.Checked;
             btnViewLogs.Enabled      = chkEnableLogging.Checked;
         }
@@ -108,7 +112,6 @@ namespace SmtpRelay.GUI
             };
             cfg.Save();
 
-            // restart service
             try
             {
                 using var sc = new ServiceController(_serviceName);
@@ -129,15 +132,12 @@ namespace SmtpRelay.GUI
 
         private void btnClose_Click(object sender, EventArgs e)
         {
-            this.Close();
+            Close();
         }
 
         private void linkRepo_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start(new ProcessStartInfo(e.Link.LinkData as string ?? linkRepo.Text)
-            {
-                UseShellExecute = true
-            });
+            Process.Start(new ProcessStartInfo(linkRepo.Text) { UseShellExecute = true });
         }
     }
 }
