@@ -1,33 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <!-- Console‐style Windows Service -->
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <!-- Self-contained single-file publish for Win-x64 -->
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-    <PublishTrimmed>true</PublishTrimmed>
-    <!-- Allow newer package versions unless explicitly overridden -->
-    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Serilog must be 4.2.0 or higher to satisfy Extensions.Hosting 9.0.0 -->
-    <PackageReference Include="Serilog" Version="4.2.0" />
-    <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
-    <!-- Expression-based filtering (for SMTP-only sink) -->
-    <PackageReference Include="Serilog.Expressions" Version="2.0.0" />
-    <!-- File sink for both app logs and SMTP logs -->
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-
-    <!-- Core SMTP server engine -->
     <PackageReference Include="SmtpServer" Version="11.0.0" />
-    <!-- MailKit for client delivery to Smarthost -->
-    <PackageReference Include="MailKit" Version="4.0.1" />
+    <PackageReference Include="MailKit" Version="4.1.0" />
     <PackageReference Include="MimeKit" Version="4.4.0" />
-
-    <!-- IP/CIDR parsing -->
     <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
+    <PackageReference Include="Serilog" Version="4.2.0" />
+    <PackageReference Include="Serilog.Expressions" Version="2.0.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
+
 </Project>
