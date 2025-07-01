@@ -3,7 +3,6 @@ using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using Serilog.Events;
 
 namespace SmtpRelay
 {
@@ -11,7 +10,7 @@ namespace SmtpRelay
     {
         static void Main(string[] args)
         {
-            // Prepare folders
+            // Prepare service & log directories
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(
                     Environment.SpecialFolder.ProgramFiles),
@@ -19,34 +18,20 @@ namespace SmtpRelay
             var logDir = Path.Combine(baseDir, "logs");
             Directory.CreateDirectory(logDir);
 
-            // Load retention setting
+            // Load retention from the shared config
             var cfg = Config.Load();
             var retention = cfg.RetentionDays;
 
-            // Paths
-            var appLogPath  = Path.Combine(logDir, "app-.log");
-            var smtpLogPath = Path.Combine(logDir, "smtp-.log");
+            // Combined application + SMTP‐event log path
+            var logPath = Path.Combine(logDir, "app-.log");
 
-            // Configure Serilog: app logs + SMTP‐only logs
+            // Configure Serilog for all events
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
-
-                // 1) General application log
                 .WriteTo.File(
-                    appLogPath,
+                    logPath,
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: retention)
-
-                // 2) Dedicated SMTP‐only log:
-                .WriteTo.Logger(lc => lc
-                    .Filter.ByIncludingOnly(evt =>
-                        evt.Properties.TryGetValue("SourceContext", out var sc) &&
-                        sc.ToString().Contains("SmtpServer"))
-                    .WriteTo.File(
-                        smtpLogPath,
-                        rollingInterval: RollingInterval.Day,
-                        retainedFileCountLimit: retention))
-
                 .CreateLogger();
 
             try
