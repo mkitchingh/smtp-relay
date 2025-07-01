@@ -1,40 +1,46 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using SmtpServer;
-using SmtpServer.Protocol;
 using SmtpServer.Storage;
 
 namespace SmtpRelay
 {
     public class Worker : BackgroundService
     {
-        readonly Config  _cfg;
-        readonly ILogger _log;
+        private readonly ILogger       _log;
+        private readonly MessageRelayStore _store;
 
-        public Worker(Config cfg, ILogger log)
+        public Worker(ILogger log, Config cfg)
         {
-            _cfg = cfg;
-            _log = log;
-            _log.Information("Relay mode: {Mode}",
-                cfg.AllowAllIPs ? "Allow ALL IPs" : $"Allow {cfg.AllowedIPs.Count} range(s)");
+            _log   = log;
+            _store = new MessageRelayStore(cfg, log);
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            var cfg = Config.Load();
+
+            // build SMTP server
             var options = new SmtpServerOptionsBuilder()
                 .ServerName("SMTP Relay")
-                .Port(25)
-                .AllowUnsecureAuthentication(_cfg.UseStartTls)
+                .Port(25, false)
+                .MessageStore(_store)
                 .Build();
 
-            // set up DI for the message store
-            var serviceProvider = new SmtpServer.ComponentModel.ServiceProvider();
-            serviceProvider.Add(new MessageRelayStore(_cfg, _log));
+            var serviceProvider = new ServiceProviderBuilder()
+                .UseSerilog(_log)
+                .BuildServiceProvider();
 
             var server = new SmtpServer.SmtpServer(options, serviceProvider);
-            return server.StartAsync(stoppingToken);
+
+            _log.Information("Relay mode: {Mode}", cfg.AllowAllIPs ? "Allow ALL IPs" : $"Allow {cfg.AllowedIPs.Count} range(s)");
+            _log.Information("Application started. Hosting environment: Production");
+
+            await server.StartAsync(stoppingToken);
         }
     }
 }
