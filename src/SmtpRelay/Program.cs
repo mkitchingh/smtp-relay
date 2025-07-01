@@ -3,7 +3,6 @@ using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using Serilog.Events;
 
 namespace SmtpRelay
 {
@@ -11,7 +10,6 @@ namespace SmtpRelay
     {
         public static void Main(string[] args)
         {
-            // ensure log directory
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "SMTP Relay","service");
@@ -23,7 +21,7 @@ namespace SmtpRelay
                 .WriteTo.File(
                     Path.Combine(logDir,"app-.log"),
                     rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit:  _loadRetention())
+                    retainedFileCountLimit: _getRetention())
                 .CreateLogger();
 
             try
@@ -51,13 +49,9 @@ namespace SmtpRelay
                 Log.CloseAndFlush();
             }
 
-            static int _loadRetention()
+            static int _getRetention()
             {
-                try
-                {
-                    var cfg = Config.Load();
-                    return cfg.RetentionDays;
-                }
+                try { return Config.Load().RetentionDays; }
                 catch { return 7; }
             }
         }
