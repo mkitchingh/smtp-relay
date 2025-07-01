@@ -1,18 +1,17 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using SmtpServer;
-using SmtpServer.Protocol;
-using SmtpServer.Storage;
+using SmtpServer.ComponentModel;
+using NetTools;
 
 namespace SmtpRelay
 {
     public class Worker : BackgroundService
     {
-        readonly Config  _cfg;
-        readonly ILogger _log;
+        private readonly Config _cfg;
+        private readonly ILogger _log;
 
         public Worker()
         {
@@ -20,28 +19,37 @@ namespace SmtpRelay
             _log = Log.Logger;
         }
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // configure inbound SMTP server
-            var options = new SmtpServerOptionsBuilder()
-                .ServerName("SMTP Relay Service")
-                .Endpoint(builder => builder
-                    .Port(25)
-                    .AllowUnsecureAuthentication()
-                    .Build())
-                .Build();
+            _log.Information("Relay mode: {Mode}",
+                _cfg.AllowAllIPs
+                    ? "Allow ALL IPs"
+                    : $"Allow {_cfg.AllowedIPs.Count} range(s)");
 
-            // plug in our relay store
-            var serviceProvider = new ServiceProviderBuilder()
-                .MessageStore(new MessageRelayStore(_cfg, _log))
-                .Build();
+            // Build SMTP server options
+            var optionsBuilder = new SmtpServerOptionsBuilder()
+                .ServerName("SMTP Relay")
+                .Port(_cfg.SmartHostPort, _cfg.UseStartTls);
 
-            var smtpServer = new SmtpServer.SmtpServer(options, serviceProvider);
+            if (!_cfg.AllowAllIPs)
+            {
+                var ep = optionsBuilder.Endpoint();
+                foreach (var r in _cfg.AllowedIPs)
+                {
+                    ep.Allow(r);
+                }
+            }
 
-            _log.Information(
-                "Application started. Content root path: {Path}", AppContext.BaseDirectory);
+            // Wire up our store
+            var serviceProvider = new SmtpServerComponentBuilder()
+                .UseMessageStore<MessageRelayStore>()
+                .BuildServiceProvider();
 
-            return smtpServer.StartAsync(stoppingToken);
+            var server = new SmtpServer.SmtpServer(
+                optionsBuilder.Build(),
+                serviceProvider);
+
+            await server.StartAsync(stoppingToken);
         }
     }
 }
