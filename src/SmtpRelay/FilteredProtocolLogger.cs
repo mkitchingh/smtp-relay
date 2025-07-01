@@ -6,18 +6,28 @@ using MailKit;
 namespace SmtpRelay
 {
     /// <summary>
-    /// Captures only SMTP commands & replies, skipping DATA bodies,
-    /// and writes them as timestamped lines.
+    /// Captures only SMTP commands & replies (skipping DATA bodies),
+    /// and writes them as timestamped lines to a daily log.
     /// </summary>
     public class FilteredProtocolLogger : IProtocolLogger, IDisposable
     {
-        readonly string _filePath;
-        readonly object _sync = new();
-        bool _inData;
+        private readonly string _filePath;
+        private readonly object _sync = new object();
+        private bool _inData;
 
         public FilteredProtocolLogger(string filePath)
         {
             _filePath = filePath;
+        }
+
+        // Prevent redaction: no secrets are filtered from auth exchanges
+        public IAuthenticationSecretDetector AuthenticationSecretDetector =>
+            new NoOpSecretDetector();
+
+        // Log when the connection is opened
+        public void LogConnect(Uri uri)
+        {
+            WriteLine($"CONNECT → {uri}");
         }
 
         public void LogClient(byte[] buffer, int offset, int count)
@@ -25,7 +35,7 @@ namespace SmtpRelay
             var line = Encoding.UTF8
                 .GetString(buffer, offset, count)
                 .TrimEnd('\r', '\n');
-            ProcessLine("CLIENT → SERVER", line);
+            ProcessLine("CLIENT →", line);
         }
 
         public void LogServer(byte[] buffer, int offset, int count)
@@ -33,12 +43,12 @@ namespace SmtpRelay
             var line = Encoding.UTF8
                 .GetString(buffer, offset, count)
                 .TrimEnd('\r', '\n');
-            ProcessLine("SERVER → CLIENT", line);
+            ProcessLine("SERVER →", line);
         }
 
-        void ProcessLine(string prefix, string line)
+        private void ProcessLine(string prefix, string line)
         {
-            // Skip DATA bodies
+            // Skip DATA body content until terminator "."
             if (_inData)
             {
                 if (line == ".") _inData = false;
@@ -49,14 +59,30 @@ namespace SmtpRelay
                 _inData = true;
             }
 
-            var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            var outLine = $"{timestamp} {prefix}: {line}";
+            WriteLine($"{prefix} {line}");
+        }
+
+        private void WriteLine(string text)
+        {
+            var ts = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             lock (_sync)
             {
-                File.AppendAllText(_filePath, outLine + Environment.NewLine);
+                File.AppendAllText(
+                    _filePath,
+                    $"{ts} {text}{Environment.NewLine}");
             }
         }
 
-        public void Dispose() { /* nothing to clean up */ }
+        public void Dispose()
+        {
+            // Nothing to clean up
+        }
+
+        // A no-op secret detector so authentication secrets aren't redacted
+        private class NoOpSecretDetector : IAuthenticationSecretDetector
+        {
+            public bool CanTest(string authenticationMethod) => false;
+            public bool IsSecret(byte[] buffer, int offset, int count) => false;
+        }
     }
 }
