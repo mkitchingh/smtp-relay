@@ -5,20 +5,20 @@ using System.IO;
 using System.Linq;
 using System.ServiceProcess;
 using System.Windows.Forms;
-using SmtpRelay;  // your core project
+using SmtpRelay;  // core project
 
 namespace SmtpRelay.GUI
 {
     public partial class MainForm : Form
     {
-        private readonly string _serviceName = "SmtpRelay";
+        // Updated to the actual service name installed on Windows
+        private const string ServiceName = "SMTP Relay Service";
 
         public MainForm()
         {
             InitializeComponent();
             LoadConfig();
             UpdateServiceStatus();
-            lblVersion.Text = Program.AppVersion;
         }
 
         private void LoadConfig()
@@ -31,22 +31,23 @@ namespace SmtpRelay.GUI
             txtPassword.Text         = cfg.Password;
             radioAllowAll.Checked    = cfg.AllowAllIPs;
             radioAllowList.Checked   = !cfg.AllowAllIPs;
-            txtIpList.Lines          = cfg.AllowedIPs.ToArray();      // LIST→ARRAY
+            txtIpList.Lines          = cfg.AllowedIPs.ToArray();
             chkEnableLogging.Checked = cfg.EnableLogging;
             numRetentionDays.Value   = cfg.RetentionDays;
             ToggleAuthFields();
             ToggleIpField();
             ToggleLoggingFields();
+            lblVersion.Text          = $"Version: {Program.AppVersion}";
         }
 
         private void UpdateServiceStatus()
         {
             try
             {
-                using var sc = new ServiceController(_serviceName);
+                using var sc = new ServiceController(ServiceName);
                 var status = sc.Status;
-                labelServiceStatus.Text       = status == ServiceControllerStatus.Running ? "Running" : "Stopped";
-                labelServiceStatus.ForeColor  = status == ServiceControllerStatus.Running ? Color.Green : Color.Red;
+                labelServiceStatus.Text      = status == ServiceControllerStatus.Running ? "Running" : "Stopped";
+                labelServiceStatus.ForeColor = status == ServiceControllerStatus.Running ? Color.Green : Color.Red;
             }
             catch
             {
@@ -107,7 +108,7 @@ namespace SmtpRelay.GUI
                 Username      = txtUsername.Text,
                 Password      = txtPassword.Text,
                 AllowAllIPs   = radioAllowAll.Checked,
-                AllowedIPs    = txtIpList.Lines.ToList(),  // ARRAY→LIST
+                AllowedIPs    = txtIpList.Lines.ToList(),
                 EnableLogging = chkEnableLogging.Checked,
                 RetentionDays = (int)numRetentionDays.Value
             };
@@ -115,7 +116,7 @@ namespace SmtpRelay.GUI
 
             try
             {
-                using var sc = new ServiceController(_serviceName);
+                using var sc = new ServiceController(ServiceName);
                 sc.Stop();  sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(10));
                 sc.Start(); sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(10));
                 MessageBox.Show("Settings saved and service restarted.", "Success",
