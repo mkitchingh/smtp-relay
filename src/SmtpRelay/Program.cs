@@ -1,5 +1,3 @@
-// File: src/SmtpRelay/Program.cs
-
 using System;
 using System.IO;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,7 +22,7 @@ namespace SmtpRelay
             var cfg = Config.Load();
             var retention = cfg.RetentionDays;
 
-            // Now only one combined application + SMTP-event log
+            // Only one combined application + SMTP-event log
             var logPath = Path.Combine(logDir, "app-.log");
 
             // Configure Serilog for all events
