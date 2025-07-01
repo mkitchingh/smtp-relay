@@ -1,9 +1,8 @@
-// File: src/SmtpRelay.GUI/MainForm.cs
-
 using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
 using System.ServiceProcess;
 using System.Windows.Forms;
 
@@ -14,6 +13,10 @@ namespace SmtpRelay.GUI
         public MainForm()
         {
             InitializeComponent();
+            // set version from assembly
+            lblVersion.Text = $"Version: {Assembly.GetExecutingAssembly().GetName().Version}";
+            chkStartTls_CheckedChanged(this, EventArgs.Empty);
+            radioAllowRestrictions_CheckedChanged(this, EventArgs.Empty);
             UpdateServiceStatus();
         }
 
@@ -40,9 +43,27 @@ namespace SmtpRelay.GUI
             }
         }
 
+        private void chkStartTls_CheckedChanged(object sender, EventArgs e)
+        {
+            // enable creds only when STARTTLS is checked
+            bool enabled = chkStartTls.Checked;
+            lblUsername.Enabled = enabled;
+            txtUsername.Enabled = enabled;
+            lblPassword.Enabled = enabled;
+            txtPassword.Enabled = enabled;
+
+            // default port
+            numPort.Value = enabled ? 587 : 25;
+        }
+
+        private void radioAllowRestrictions_CheckedChanged(object sender, EventArgs e)
+        {
+            // ip list only when "Allow Specified"
+            txtIpList.Enabled = radioAllowList.Checked;
+        }
+
         private void btnViewLogs_Click(object sender, EventArgs e)
         {
-            // Opens the actual log folder under Program Files
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(
                     Environment.SpecialFolder.ProgramFiles),
@@ -52,7 +73,7 @@ namespace SmtpRelay.GUI
 
         private void btnSave_Click(object sender, EventArgs e)
         {
-            // Your existing save logic goes here...
+            // your existing save & restart logic...
             UpdateServiceStatus();
         }
 
