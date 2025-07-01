@@ -1,5 +1,3 @@
-// File: src/SmtpRelay/Worker.cs
-
 using System;
 using System.Buffers;
 using System.Linq;
@@ -18,22 +16,21 @@ namespace SmtpRelay
 {
     public class Worker : BackgroundService
     {
-        readonly ILogger<Worker> _log;
-        readonly Config _cfg;
-        readonly IPAddressRange[] _ranges;
+        readonly ILogger<Worker>   _log;
+        readonly Config            _cfg;
+        readonly IPAddressRange[]  _ranges;
 
         public Worker(ILogger<Worker> log)
         {
-            _log = log;
-            _cfg = Config.Load();
+            _log   = log;
+            _cfg   = Config.Load();
             _ranges = _cfg.AllowAllIPs
                 ? Array.Empty<IPAddressRange>()
                 : _cfg.AllowedIPs.Select(IPAddressRange.Parse).ToArray();
 
-            _log.LogInformation(
-                _cfg.AllowAllIPs
-                  ? "Relay mode: Allow ALL IPs"
-                  : $"Relay mode: Allow {_ranges.Length} range(s)");
+            _log.LogInformation(_cfg.AllowAllIPs
+                ? "Relay mode: Allow ALL IPs"
+                : $"Relay mode: Allow {_ranges.Length} range(s)");
         }
 
         protected override Task ExecuteAsync(CancellationToken token)
@@ -52,19 +49,23 @@ namespace SmtpRelay
         }
 
         /// <summary>
-        /// Enforces the IP allow‐list and forwards mail when allowed.
+        /// Enforces the IP allow-list, logs via both “app” and “smtp” loggers,
+        /// and relays mail when permitted.
         /// </summary>
         private sealed class RelayStore : MessageStore
         {
-            readonly Config _cfg;
-            readonly IPAddressRange[] _ranges;
-            readonly ILogger _log;
+            readonly Config            _cfg;
+            readonly IPAddressRange[]  _ranges;
+            readonly ILogger           _log;
 
-            public RelayStore(Config cfg, IPAddressRange[] ranges, ILogger log)
+            public RelayStore(
+                Config cfg,
+                IPAddressRange[] ranges,
+                ILogger log)
             {
-                _cfg = cfg;
+                _cfg    = cfg;
                 _ranges = ranges;
-                _log = log;
+                _log    = log;
             }
 
             public override async Task<SmtpResponse> SaveAsync(
@@ -73,7 +74,7 @@ namespace SmtpRelay
                 ReadOnlySequence<byte> buffer,
                 CancellationToken   cancellationToken)
             {
-                // Extract the *client* endpoint by skipping ANY (0.0.0.0 / ::)
+                // 1) Extract the *client* IP, skipping server-listeners (0.0.0.0/::)
                 IPAddress? ip = context.Properties.Values
                     .OfType<IPEndPoint>()
                     .Where(ep =>
@@ -82,9 +83,11 @@ namespace SmtpRelay
                     .Select(ep => ep.Address)
                     .FirstOrDefault();
 
+                // 2) Log the attempt
                 _log.LogInformation("Incoming relay request from {IP}", ip);
+                SmtpLogger.Logger.Information("Incoming relay request from {IP}", ip);
 
-                // Check allow-list
+                // 3) Enforce allow-list
                 bool allowed = _cfg.AllowAllIPs
                             || _ranges.Length == 0
                             || (ip != null && _ranges.Any(r => r.Contains(ip)));
@@ -92,21 +95,29 @@ namespace SmtpRelay
                 if (!allowed)
                 {
                     _log.LogWarning("DENIED {IP} — not in allow-list", ip);
+                    SmtpLogger.Logger.Warning("DENIED {IP} — not in allow-list", ip);
+
                     return new SmtpResponse(
                         SmtpReplyCode.MailboxUnavailable,
                         "550 Relaying Denied");
                 }
 
-                // Forward the mail
+                // 4) Forward mail
                 try
                 {
-                    await MailSender.SendAsync(_cfg, buffer, cancellationToken);
+                    await MailSender.SendAsync(
+                        _cfg, buffer, cancellationToken);
+
                     _log.LogInformation("Relayed mail from {IP}", ip);
+                    SmtpLogger.Logger.Information("Relayed mail from {IP}", ip);
+
                     return SmtpResponse.Ok;
                 }
                 catch (Exception ex)
                 {
                     _log.LogError(ex, "Relay failure from {IP}", ip);
+                    SmtpLogger.Logger.Error(ex, "Relay failure from {IP}", ip);
+
                     return SmtpResponse.TransactionFailed;
                 }
             }
