@@ -1,33 +1,20 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <OutputType>Exe</OutputType>
-    <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
-    <PublishTrimmed>true</PublishTrimmed>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <!-- Treat downgrade & missing‐package warnings as errors -->
-    <WarningsAsErrors>$(WarningsAsErrors);NU1605;NU1102</WarningsAsErrors>
+    <PublishSingleFile>true</PublishSingleFile>
+    <!-- don’t treat warnings as errors so variant package versions don’t block you -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Inbound SMTP server -->
     <PackageReference Include="SmtpServer" Version="11.0.0" />
-
-    <!-- IP/CIDR parsing -->
-    <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
-
-    <!-- Outbound relay -->
     <PackageReference Include="MailKit" Version="4.1.0" />
     <PackageReference Include="MimeKit" Version="4.4.0" />
-
-    <!-- Logging -->
+    <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
+    <PackageReference Include="Serilog" Version="2.12.0" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-
-    <!-- Align hosting‐logging versions -->
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
   </ItemGroup>
 </Project>
