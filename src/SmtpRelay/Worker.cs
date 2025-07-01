@@ -1,3 +1,5 @@
+// File: src/SmtpRelay/Worker.cs
+
 using System;
 using System.Buffers;
 using System.Linq;
@@ -22,15 +24,16 @@ namespace SmtpRelay
 
         public Worker(ILogger<Worker> log)
         {
-            _log   = log;
-            _cfg   = Config.Load();
+            _log = log;
+            _cfg = Config.Load();
             _ranges = _cfg.AllowAllIPs
                 ? Array.Empty<IPAddressRange>()
                 : _cfg.AllowedIPs.Select(IPAddressRange.Parse).ToArray();
 
-            _log.LogInformation(_cfg.AllowAllIPs
-                ? "Relay mode: Allow ALL IPs"
-                : $"Relay mode: Allow {_ranges.Length} range(s)");
+            _log.LogInformation(
+                _cfg.AllowAllIPs
+                  ? "Relay mode: Allow ALL IPs"
+                  : $"Relay mode: Allow {_ranges.Length} range(s)");
         }
 
         protected override Task ExecuteAsync(CancellationToken token)
@@ -48,7 +51,9 @@ namespace SmtpRelay
                 .StartAsync(token);
         }
 
-        // ── Nested class enforcing allow-list ───────────────────────
+        /// <summary>
+        /// Enforces the IP allow‐list and forwards mail when allowed.
+        /// </summary>
         private sealed class RelayStore : MessageStore
         {
             readonly Config _cfg;
@@ -63,20 +68,23 @@ namespace SmtpRelay
             }
 
             public override async Task<SmtpResponse> SaveAsync(
-                ISessionContext context,
+                ISessionContext     context,
                 IMessageTransaction transaction,
                 ReadOnlySequence<byte> buffer,
-                CancellationToken cancellationToken)
+                CancellationToken   cancellationToken)
             {
-                // Extract whichever IPEndPoint is in the context properties
-                IPAddress? ip = context.Properties
-                    .Values
+                // Extract the *client* endpoint by skipping ANY (0.0.0.0 / ::)
+                IPAddress? ip = context.Properties.Values
                     .OfType<IPEndPoint>()
+                    .Where(ep =>
+                        !IPAddress.Any.Equals(ep.Address) &&
+                        !IPAddress.IPv6Any.Equals(ep.Address))
                     .Select(ep => ep.Address)
                     .FirstOrDefault();
 
                 _log.LogInformation("Incoming relay request from {IP}", ip);
 
+                // Check allow-list
                 bool allowed = _cfg.AllowAllIPs
                             || _ranges.Length == 0
                             || (ip != null && _ranges.Any(r => r.Contains(ip)));
@@ -89,6 +97,7 @@ namespace SmtpRelay
                         "550 Relaying Denied");
                 }
 
+                // Forward the mail
                 try
                 {
                     await MailSender.SendAsync(_cfg, buffer, cancellationToken);
