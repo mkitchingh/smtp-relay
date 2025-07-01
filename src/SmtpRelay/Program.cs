@@ -8,22 +8,23 @@ namespace SmtpRelay
 {
     internal static class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-            // Shared folders
+            // Prepare log folder
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "SMTP Relay", "service");
             var logDir = Path.Combine(baseDir, "logs");
             Directory.CreateDirectory(logDir);
 
-            // Serilog: only a single rolling app log
+            // Initialize Serilog: single rolling log
+            var cfg = Config.Load();
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .WriteTo.File(
-                    Path.Combine(logDir, "app-.log"),
+                    Path.Combine(logDir, "log-.txt"),
                     rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: 7)
+                    retainedFileCountLimit: cfg.RetentionDays)
                 .CreateLogger();
 
             try
@@ -32,7 +33,7 @@ namespace SmtpRelay
                 Host.CreateDefaultBuilder(args)
                     .UseWindowsService()
                     .UseSerilog()
-                    .ConfigureServices((_, services) =>
+                    .ConfigureServices(services =>
                         services.AddHostedService<Worker>())
                     .Build()
                     .Run();
