@@ -1,81 +1,65 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Text.Json;
-using NetTools;
+using IPAddressRange;
 
 namespace SmtpRelay
 {
     public class Config
     {
-        public string SmartHost     { get; set; } = "";
-        public int    SmartHostPort { get; set; } = 25;
-        public string Username      { get; set; } = "";
-        public string Password      { get; set; } = "";
-        public bool   UseStartTls   { get; set; } = false;
+        public string SmartHost { get; set; } = "";
+        public int SmartHostPort { get; set; } = 25;
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+        public bool UseStartTls { get; set; }
+        public bool AllowAllIPs { get; set; } = true;
+        public List<string> AllowedIPs { get; set; } = new List<string>();
+        public bool EnableLogging { get; set; }
+        public int RetentionDays { get; set; } = 7;
 
-        public bool AllowAllIPs       { get; set; } = true;
-        public List<string> AllowedIPs { get; set; } = new();
-
-        public bool EnableLogging { get; set; } = false;
-        public int  RetentionDays { get; set; } = 30;
-
-        // Shared path under Program Files\SMTP Relay\config.json
-        private static string FilePath
-        {
-            get
-            {
-                var baseDir = Environment.GetFolderPath(
-                    Environment.SpecialFolder.ProgramFiles);
-                var dir     = Path.Combine(baseDir, "SMTP Relay");
-                Directory.CreateDirectory(dir);
-                return Path.Combine(dir, "config.json");
-            }
-        }
+        static string FilePath =>
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "SMTP Relay", "service", "config.json");
 
         public static Config Load()
         {
-            var path = FilePath;
-            if (!File.Exists(path)) return new Config();
-            return JsonSerializer
-                .Deserialize<Config>(File.ReadAllText(path))
-                ?? new Config();
+            if (!File.Exists(FilePath))
+                return new Config();
+
+            var json = File.ReadAllText(FilePath);
+            return JsonSerializer.Deserialize<Config>(json)!
+                   ?? new Config();
         }
 
-        /// <summary>
-        /// Validates and saves the config to the shared path.
-        /// Throws FormatException on invalid entries, IOException on write failure.
-        /// </summary>
         public void Save()
         {
-            if (string.IsNullOrWhiteSpace(SmartHost))
-                throw new FormatException("SMTP Host must not be empty.");
-
+            // Validate IP/CIDR entries if not AllowAll
             if (!AllowAllIPs)
             {
-                foreach (var entry in AllowedIPs)
+                var entries = AllowedIPs
+                    .SelectMany(s => s.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                    .Select(s => s.Trim());
+                foreach (var e in entries)
                 {
-                    try { _ = IPAddressRange.Parse(entry); }
-                    catch (Exception ex)
-                    {
-                        throw new FormatException(
-                            $"Invalid IP or CIDR entry \"{entry}\": {ex.Message}");
-                    }
+                    // throws if invalid
+                    if (e.Contains('/'))
+                        _ = IPAddressRange.Parse(e);
+                    else
+                        _ = IPAddress.Parse(e);
                 }
             }
 
-            var json = JsonSerializer.Serialize(
-                this, new JsonSerializerOptions { WriteIndented = true });
+            // Ensure directory
+            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
 
-            try
-            {
-                File.WriteAllText(FilePath, json);
-            }
-            catch (Exception ex)
-            {
-                throw new IOException(
-                    $"Failed to write config file at {FilePath}:\n{ex.Message}");
-            }
+            // Write
+            var opts = new JsonSerializerOptions { WriteIndented = true };
+            File.WriteAllText(FilePath,
+                JsonSerializer.Serialize(this, opts));
         }
     }
 }
