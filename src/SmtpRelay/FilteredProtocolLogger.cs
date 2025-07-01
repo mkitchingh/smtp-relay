@@ -24,7 +24,6 @@ namespace SmtpRelay
         // Required by interface: no-op detector
         public IAuthenticationSecretDetector AuthenticationSecretDetector { get; set; } = new NoOpSecretDetector();
 
-        // Log when the connection is opened
         public void LogConnect(Uri uri)
         {
             WriteLine($"CONNECT → {uri}");
@@ -72,17 +71,13 @@ namespace SmtpRelay
             }
         }
 
-        public void Dispose()
-        {
-            // Nothing to clean up
-        }
+        public void Dispose() { /* nothing to clean up */ }
 
         // A no-op secret detector so authentication secrets aren't redacted
         private class NoOpSecretDetector : IAuthenticationSecretDetector
         {
             public IList<AuthenticationSecret> DetectSecrets(byte[] buffer, int offset, int count)
             {
-                // No secrets filtered
                 return Array.Empty<AuthenticationSecret>();
             }
         }
