@@ -8,7 +8,7 @@
     <PublishTrimmed>true</PublishTrimmed>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <!-- treat warnings as errors except NU1903 -->
+    <!-- treat package-downgrade warnings as errors -->
     <WarningsAsErrors>$(WarningsAsErrors);NU1605;NU1102</WarningsAsErrors>
   </PropertyGroup>
 
@@ -27,7 +27,7 @@
     <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
 
-    <!-- Microsoft logging abstractions -->
-    <FrameworkReference Include="Microsoft.Extensions.Logging" />
+    <!-- Logging abstractions -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
   </ItemGroup>
 </Project>
