@@ -1,24 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
-    <!-- WinForms app -->
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
 
-    <!-- Publishing as single, self-contained EXE -->
+    <!-- your publish settings -->
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
 
-    <!-- Match your service’s version stamp -->
+    <!-- version alignment -->
     <Version>1.4.0.0</Version>
     <FileVersion>1.4.0.0</FileVersion>
     <AssemblyVersion>1.4.0.0</AssemblyVersion>
   </PropertyGroup>
-
-  <ItemGroup>
-    <!-- Ensure you have these refs -->
-    <PackageReference Include="Serilog" Version="2.12.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
-  </ItemGroup>
 </Project>
