@@ -9,7 +9,6 @@
     <PublishTrimmed>false</PublishTrimmed>
     <!-- embed the blue envelope icon -->
     <ApplicationIcon>smtp.ico</ApplicationIcon>
-    <Win32Resource>smtp.ico</Win32Resource>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\SmtpRelay\SmtpRelay.csproj" />
