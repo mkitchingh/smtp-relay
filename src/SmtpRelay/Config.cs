@@ -1,8 +1,8 @@
 using System;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
-using IPAddressRange;  // from the IPAddressRange NuGet package
+using System.Collections.Generic;
+using IPAddressRange;
 
 namespace SmtpRelay
 {
@@ -14,48 +14,43 @@ namespace SmtpRelay
         public string Password { get; set; } = "";
         public bool UseStartTls { get; set; }
         public bool AllowAllIPs { get; set; }
-        public string AllowedIPs { get; set; } = "";
+        public List<string> AllowedIPs { get; set; } = new();
         public bool EnableLogging { get; set; }
         public int RetentionDays { get; set; }
 
         private static readonly string ConfigPath =
             Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                "SMTP Relay", "config.json"
-            );
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "SMTP Relay", "service", "config.json");
 
         public static Config Load()
         {
             if (!File.Exists(ConfigPath))
                 return new Config();
-
             var json = File.ReadAllText(ConfigPath);
-            return JsonSerializer.Deserialize<Config>(json) ?? new Config();
+            var opts = new JsonSerializerOptions { WriteIndented = true };
+            return JsonSerializer.Deserialize<Config>(json, opts)!
+                   ?? new Config();
         }
 
         public void Save()
         {
-            // Ensure folder exists
             var dir = Path.GetDirectoryName(ConfigPath)!;
             Directory.CreateDirectory(dir);
+            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(ConfigPath, json);
+        }
 
-            // If we’re restricting IPs, split on commas or semicolons and parse each
-            if (!AllowAllIPs)
+        public IEnumerable<IPAddressRange> GetRanges()
+        {
+            if (AllowAllIPs)
             {
-                var parsed = AllowedIPs
-                    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(s => s.Trim())
-                    .Select(s => IPAddressRange.Parse(s))
-                    .ToList();
-
-                // Re-serialize back to normalized comma list
-                AllowedIPs = string.Join(",", parsed.Select(r => r.ToString()));
+                yield return IPAddressRange.Parse("0.0.0.0/0");
+                yield break;
             }
 
-            // Write out JSON
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(this, options);
-            File.WriteAllText(ConfigPath, json);
+            foreach (var s in AllowedIPs)
+                yield return IPAddressRange.Parse(s);
         }
     }
 }
