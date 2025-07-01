@@ -4,6 +4,7 @@ namespace SmtpRelay.GUI
     {
         private System.ComponentModel.IContainer components = null;
 
+        private System.Windows.Forms.TableLayoutPanel tableLayout;
         private System.Windows.Forms.Label lblSmtpHost;
         private System.Windows.Forms.TextBox txtSmtpHost;
         private System.Windows.Forms.Label lblPort;
@@ -16,7 +17,6 @@ namespace SmtpRelay.GUI
         private System.Windows.Forms.Label lblRestrictions;
         private System.Windows.Forms.RadioButton radioAllowAll;
         private System.Windows.Forms.RadioButton radioAllowList;
-        private System.Windows.Forms.Label lblIpList;
         private System.Windows.Forms.TextBox txtIpList;
         private System.Windows.Forms.Label lblIpSample;
         private System.Windows.Forms.Label lblLogging;
@@ -32,315 +32,194 @@ namespace SmtpRelay.GUI
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing && components != null)
-                components.Dispose();
+            if (disposing && (components != null)) components.Dispose();
             base.Dispose(disposing);
         }
 
-        #region Windows Form Designer generated code
+        #region Designer generated code
 
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.lblSmtpHost = new System.Windows.Forms.Label();
-            this.txtSmtpHost = new System.Windows.Forms.TextBox();
-            this.lblPort = new System.Windows.Forms.Label();
-            this.numPort = new System.Windows.Forms.NumericUpDown();
-            this.chkStartTls = new System.Windows.Forms.CheckBox();
-            this.lblUsername = new System.Windows.Forms.Label();
-            this.txtUsername = new System.Windows.Forms.TextBox();
-            this.lblPassword = new System.Windows.Forms.Label();
-            this.txtPassword = new System.Windows.Forms.TextBox();
+
+            this.tableLayout     = new System.Windows.Forms.TableLayoutPanel();
+            this.lblSmtpHost     = new System.Windows.Forms.Label();
+            this.txtSmtpHost     = new System.Windows.Forms.TextBox();
+            this.lblPort         = new System.Windows.Forms.Label();
+            this.numPort         = new System.Windows.Forms.NumericUpDown();
+            this.chkStartTls     = new System.Windows.Forms.CheckBox();
+            this.lblUsername     = new System.Windows.Forms.Label();
+            this.txtUsername     = new System.Windows.Forms.TextBox();
+            this.lblPassword     = new System.Windows.Forms.Label();
+            this.txtPassword     = new System.Windows.Forms.TextBox();
             this.lblRestrictions = new System.Windows.Forms.Label();
-            this.radioAllowAll = new System.Windows.Forms.RadioButton();
-            this.radioAllowList = new System.Windows.Forms.RadioButton();
-            this.lblIpList = new System.Windows.Forms.Label();
-            this.txtIpList = new System.Windows.Forms.TextBox();
-            this.lblIpSample = new System.Windows.Forms.Label();
-            this.lblLogging = new System.Windows.Forms.Label();
-            this.chkEnableLogging = new System.Windows.Forms.CheckBox();
-            this.lblDaysKept = new System.Windows.Forms.Label();
-            this.numDaysKept = new System.Windows.Forms.NumericUpDown();
-            this.btnViewLogs = new System.Windows.Forms.Button();
-            this.btnSave = new System.Windows.Forms.Button();
-            this.btnClose = new System.Windows.Forms.Button();
-            this.lblVersion = new System.Windows.Forms.Label();
-            this.linkRepo = new System.Windows.Forms.LinkLabel();
+            this.radioAllowAll   = new System.Windows.Forms.RadioButton();
+            this.radioAllowList  = new System.Windows.Forms.RadioButton();
+            this.txtIpList       = new System.Windows.Forms.TextBox();
+            this.lblIpSample     = new System.Windows.Forms.Label();
+            this.lblLogging      = new System.Windows.Forms.Label();
+            this.chkEnableLogging= new System.Windows.Forms.CheckBox();
+            this.lblDaysKept     = new System.Windows.Forms.Label();
+            this.numDaysKept     = new System.Windows.Forms.NumericUpDown();
+            this.btnViewLogs     = new System.Windows.Forms.Button();
+            this.btnSave         = new System.Windows.Forms.Button();
+            this.btnClose        = new System.Windows.Forms.Button();
+            this.lblVersion      = new System.Windows.Forms.Label();
+            this.linkRepo        = new System.Windows.Forms.LinkLabel();
             this.labelServiceStatus = new System.Windows.Forms.Label();
+
             ((System.ComponentModel.ISupportInitialize)(this.numPort)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numDaysKept)).BeginInit();
             this.SuspendLayout();
+
             // 
-            // lblSmtpHost
+            // tableLayout
             // 
-            this.lblSmtpHost.AutoSize = true;
-            this.lblSmtpHost.Location = new System.Drawing.Point(20, 20);
-            this.lblSmtpHost.Name = "lblSmtpHost";
-            this.lblSmtpHost.Size = new System.Drawing.Size(65, 13);
-            this.lblSmtpHost.TabIndex = 0;
+            this.tableLayout.ColumnCount = 2;
+            this.tableLayout.RowCount    = 12;
+            this.tableLayout.Dock        = System.Windows.Forms.DockStyle.Fill;
+            this.tableLayout.AutoSize    = true;
+            this.tableLayout.AutoSizeMode= System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.tableLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.AutoSize));
+            this.tableLayout.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            for (int i = 0; i < 12; i++)
+                this.tableLayout.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
+
+            // 
+            // Row 0: SMTP Host
+            // 
             this.lblSmtpHost.Text = "SMTP Host:";
+            this.lblSmtpHost.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.tableLayout.Controls.Add(this.lblSmtpHost, 0, 0);
+            this.txtSmtpHost.Anchor = System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            this.txtSmtpHost.Width  = 400;
+            this.tableLayout.Controls.Add(this.txtSmtpHost, 1, 0);
+
             // 
-            // txtSmtpHost
+            // Row 1: Port + STARTTLS
             // 
-            this.txtSmtpHost.Location = new System.Drawing.Point(150, 17);
-            this.txtSmtpHost.Name = "txtSmtpHost";
-            this.txtSmtpHost.Size = new System.Drawing.Size(400, 20);
-            this.txtSmtpHost.TabIndex = 1;
-            // 
-            // lblPort
-            // 
-            this.lblPort.AutoSize = true;
-            this.lblPort.Location = new System.Drawing.Point(20, 60);
-            this.lblPort.Name = "lblPort";
-            this.lblPort.Size = new System.Drawing.Size(29, 13);
-            this.lblPort.TabIndex = 2;
             this.lblPort.Text = "Port:";
-            // 
-            // numPort
-            // 
-            this.numPort.Location = new System.Drawing.Point(150, 58);
-            this.numPort.Maximum = new decimal(new int[] {65535,0,0,0});
-            this.numPort.Minimum = new decimal(new int[] {1,0,0,0});
-            this.numPort.Name = "numPort";
-            this.numPort.Size = new System.Drawing.Size(80, 20);
-            this.numPort.TabIndex = 3;
-            this.numPort.Value = new decimal(new int[] {25,0,0,0});
-            // 
-            // chkStartTls
-            // 
-            this.chkStartTls.AutoSize = true;
-            this.chkStartTls.Location = new System.Drawing.Point(260, 59);
-            this.chkStartTls.Name = "chkStartTls";
-            this.chkStartTls.Size = new System.Drawing.Size(70, 17);
-            this.chkStartTls.TabIndex = 4;
+            this.tableLayout.Controls.Add(this.lblPort, 0, 1);
+            var flpPort = new System.Windows.Forms.FlowLayoutPanel
+            {
+                AutoSize     = true,
+                Dock         = System.Windows.Forms.DockStyle.Fill,
+                FlowDirection= System.Windows.Forms.FlowDirection.LeftToRight
+            };
+            this.numPort.Minimum = 1;
+            this.numPort.Maximum = 65535;
+            this.numPort.Value   = 25;
+            flpPort.Controls.Add(this.numPort);
             this.chkStartTls.Text = "STARTTLS";
-            this.chkStartTls.UseVisualStyleBackColor = true;
-            this.chkStartTls.CheckedChanged += new System.EventHandler(this.chkStartTls_CheckedChanged);
+            flpPort.Controls.Add(this.chkStartTls);
+            this.tableLayout.Controls.Add(flpPort, 1, 1);
+
             // 
-            // lblUsername
+            // Row 2: Username
             // 
-            this.lblUsername.AutoSize = true;
-            this.lblUsername.Location = new System.Drawing.Point(20, 100);
-            this.lblUsername.Name = "lblUsername";
-            this.lblUsername.Size = new System.Drawing.Size(58, 13);
-            this.lblUsername.TabIndex = 5;
             this.lblUsername.Text = "Username:";
+            this.tableLayout.Controls.Add(this.lblUsername, 0, 2);
+            this.txtUsername.Anchor = System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            this.tableLayout.Controls.Add(this.txtUsername, 1, 2);
+
             // 
-            // txtUsername
+            // Row 3: Password
             // 
-            this.txtUsername.Location = new System.Drawing.Point(150, 97);
-            this.txtUsername.Name = "txtUsername";
-            this.txtUsername.Size = new System.Drawing.Size(400, 20);
-            this.txtUsername.TabIndex = 6;
-            // 
-            // lblPassword
-            // 
-            this.lblPassword.AutoSize = true;
-            this.lblPassword.Location = new System.Drawing.Point(20, 140);
-            this.lblPassword.Name = "lblPassword";
-            this.lblPassword.Size = new System.Drawing.Size(56, 13);
-            this.lblPassword.TabIndex = 7;
             this.lblPassword.Text = "Password:";
-            // 
-            // txtPassword
-            // 
-            this.txtPassword.Location = new System.Drawing.Point(150, 137);
-            this.txtPassword.Name = "txtPassword";
+            this.tableLayout.Controls.Add(this.lblPassword, 0, 3);
+            this.txtPassword.Anchor = System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
             this.txtPassword.PasswordChar = '*';
-            this.txtPassword.Size = new System.Drawing.Size(400, 20);
-            this.txtPassword.TabIndex = 8;
+            this.tableLayout.Controls.Add(this.txtPassword, 1, 3);
+
             // 
-            // lblRestrictions
+            // Row 4: Relay Restrictions
             // 
-            this.lblRestrictions.AutoSize = true;
-            this.lblRestrictions.Location = new System.Drawing.Point(20, 180);
-            this.lblRestrictions.Name = "lblRestrictions";
-            this.lblRestrictions.Size = new System.Drawing.Size(100, 13);
-            this.lblRestrictions.TabIndex = 9;
             this.lblRestrictions.Text = "Relay Restrictions:";
-            // 
-            // radioAllowAll
-            // 
-            this.radioAllowAll.AutoSize = true;
-            this.radioAllowAll.Location = new System.Drawing.Point(150, 178);
-            this.radioAllowAll.Name = "radioAllowAll";
-            this.radioAllowAll.Size = new System.Drawing.Size(67, 17);
-            this.radioAllowAll.TabIndex = 10;
-            this.radioAllowAll.TabStop = true;
-            this.radioAllowAll.Text = "Allow All";
-            this.radioAllowAll.UseVisualStyleBackColor = true;
-            this.radioAllowAll.CheckedChanged += new System.EventHandler(this.radioAllowRestrictions_CheckedChanged);
-            // 
-            // radioAllowList
-            // 
-            this.radioAllowList.AutoSize = true;
-            this.radioAllowList.Location = new System.Drawing.Point(260, 178);
-            this.radioAllowList.Name = "radioAllowList";
-            this.radioAllowList.Size = new System.Drawing.Size(106, 17);
-            this.radioAllowList.TabIndex = 11;
-            this.radioAllowList.TabStop = true;
+            this.tableLayout.Controls.Add(this.lblRestrictions, 0, 4);
+            var flpRel = new System.Windows.Forms.FlowLayoutPanel
+            {
+                AutoSize      = true,
+                Dock          = System.Windows.Forms.DockStyle.Fill,
+                FlowDirection = System.Windows.Forms.FlowDirection.LeftToRight
+            };
+            this.radioAllowAll.Text  = "Allow All";
             this.radioAllowList.Text = "Allow Specified";
-            this.radioAllowList.UseVisualStyleBackColor = true;
-            this.radioAllowList.CheckedChanged += new System.EventHandler(this.radioAllowRestrictions_CheckedChanged);
+            flpRel.Controls.Add(this.radioAllowAll);
+            flpRel.Controls.Add(this.radioAllowList);
+            this.tableLayout.Controls.Add(flpRel, 1, 4);
+
             // 
-            // lblIpList
+            // Row 5: IP List
             // 
-            this.lblIpList.AutoSize = true;
-            this.lblIpList.Location = new System.Drawing.Point(20, 220);
-            this.lblIpList.Name = "lblIpList";
-            this.lblIpList.Size = new System.Drawing.Size(80, 13);
-            this.lblIpList.TabIndex = 12;
-            this.lblIpList.Text = "IP Allowed List:";
-            // 
-            // txtIpList
-            // 
-            this.txtIpList.Location = new System.Drawing.Point(150, 217);
             this.txtIpList.Multiline = true;
-            this.txtIpList.Name = "txtIpList";
-            this.txtIpList.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtIpList.Size = new System.Drawing.Size(400, 80);
-            this.txtIpList.TabIndex = 13;
+            this.txtIpList.Height    = 80;
+            this.txtIpList.ScrollBars= System.Windows.Forms.ScrollBars.Vertical;
+            this.tableLayout.Controls.Add(this.txtIpList, 1, 5);
+
             // 
-            // lblIpSample
+            // Row 6: IP Sample
             // 
-            this.lblIpSample.AutoSize = true;
             this.lblIpSample.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.lblIpSample.Location = new System.Drawing.Point(150, 305);
-            this.lblIpSample.Name = "lblIpSample";
-            this.lblIpSample.Size = new System.Drawing.Size(280, 13);
-            this.lblIpSample.TabIndex = 14;
-            this.lblIpSample.Text = "e.g. 192.168.1.0/24, 10.0.0.1, 2001:db8::/32 (comma-separated)";
+            this.lblIpSample.Text      = "e.g. 192.168.1.0/24, 10.0.0.1, 2001:db8::/32";
+            this.tableLayout.Controls.Add(this.lblIpSample, 1, 6);
+
             // 
-            // lblLogging
+            // Row 7: Logging
             // 
-            this.lblLogging.AutoSize = true;
-            this.lblLogging.Location = new System.Drawing.Point(20, 340);
-            this.lblLogging.Name = "lblLogging";
-            this.lblLogging.Size = new System.Drawing.Size(47, 13);
-            this.lblLogging.TabIndex = 15;
             this.lblLogging.Text = "Logging:";
-            // 
-            // chkEnableLogging
-            // 
-            this.chkEnableLogging.AutoSize = true;
-            this.chkEnableLogging.Location = new System.Drawing.Point(150, 338);
-            this.chkEnableLogging.Name = "chkEnableLogging";
-            this.chkEnableLogging.Size = new System.Drawing.Size(102, 17);
-            this.chkEnableLogging.TabIndex = 16;
+            this.tableLayout.Controls.Add(this.lblLogging, 0, 7);
+            var flpLog = new System.Windows.Forms.FlowLayoutPanel
+            {
+                AutoSize      = true,
+                Dock          = System.Windows.Forms.DockStyle.Fill,
+                FlowDirection = System.Windows.Forms.FlowDirection.LeftToRight
+            };
             this.chkEnableLogging.Text = "Enable Logging";
-            this.chkEnableLogging.UseVisualStyleBackColor = true;
-            // 
-            // lblDaysKept
-            // 
-            this.lblDaysKept.AutoSize = true;
-            this.lblDaysKept.Location = new System.Drawing.Point(280, 340);
-            this.lblDaysKept.Name = "lblDaysKept";
-            this.lblDaysKept.Size = new System.Drawing.Size(61, 13);
-            this.lblDaysKept.TabIndex = 17;
+            flpLog.Controls.Add(this.chkEnableLogging);
+            flpLog.Controls.Add(this.lblDaysKept);
             this.lblDaysKept.Text = "Days Kept:";
+            flpLog.Controls.Add(this.numDaysKept);
+            this.numDaysKept.Minimum=1;
+            this.numDaysKept.Value  =30;
+            this.btnViewLogs.Text   = "View Logs";
+            flpLog.Controls.Add(this.btnViewLogs);
+            this.tableLayout.Controls.Add(flpLog, 1, 7);
+
             // 
-            // numDaysKept
+            // Row 8: Buttons
             // 
-            this.numDaysKept.Location = new System.Drawing.Point(360, 338);
-            this.numDaysKept.Minimum = new decimal(new int[] {1,0,0,0});
-            this.numDaysKept.Name = "numDaysKept";
-            this.numDaysKept.Size = new System.Drawing.Size(60, 20);
-            this.numDaysKept.TabIndex = 18;
-            this.numDaysKept.Value = new decimal(new int[] {30,0,0,0});
-            // 
-            // btnViewLogs
-            // 
-            this.btnViewLogs.Location = new System.Drawing.Point(450, 335);
-            this.btnViewLogs.Name = "btnViewLogs";
-            this.btnViewLogs.Size = new System.Drawing.Size(100, 25);
-            this.btnViewLogs.TabIndex = 19;
-            this.btnViewLogs.Text = "View Logs";
-            this.btnViewLogs.UseVisualStyleBackColor = true;
-            this.btnViewLogs.Click += new System.EventHandler(this.btnViewLogs_Click);
-            // 
-            // btnSave
-            // 
-            this.btnSave.Location = new System.Drawing.Point(150, 380);
-            this.btnSave.Name = "btnSave";
-            this.btnSave.Size = new System.Drawing.Size(100, 40);
-            this.btnSave.TabIndex = 20;
-            this.btnSave.Text = "Save && Restart";
-            this.btnSave.UseVisualStyleBackColor = true;
-            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
-            // 
-            // btnClose
-            // 
-            this.btnClose.Location = new System.Drawing.Point(300, 380);
-            this.btnClose.Name = "btnClose";
-            this.btnClose.Size = new System.Drawing.Size(100, 40);
-            this.btnClose.TabIndex = 21;
+            var flpBtns = new System.Windows.Forms.FlowLayoutPanel
+            {
+                AutoSize      = true,
+                Dock          = System.Windows.Forms.DockStyle.Fill,
+                FlowDirection = System.Windows.Forms.FlowDirection.LeftToRight
+            };
+            this.btnSave.Text  = "Save and Restart";
             this.btnClose.Text = "Close";
-            this.btnClose.UseVisualStyleBackColor = true;
-            this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
+            flpBtns.Controls.Add(this.btnSave);
+            flpBtns.Controls.Add(this.btnClose);
+            this.tableLayout.Controls.Add(flpBtns, 1, 8);
+
             // 
-            // lblVersion
+            // Row 9: Service Status
             // 
-            this.lblVersion.AutoSize = true;
-            this.lblVersion.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.lblVersion.Location = new System.Drawing.Point(20, 750);
-            this.lblVersion.Name = "lblVersion";
-            this.lblVersion.Size = new System.Drawing.Size(54, 13);
-            this.lblVersion.TabIndex = 22;
-            this.lblVersion.Text = "Version: ?";
-            // 
-            // linkRepo
-            // 
-            this.linkRepo.AutoSize = true;
-            this.linkRepo.Location = new System.Drawing.Point(150, 750);
-            this.linkRepo.Name = "linkRepo";
-            this.linkRepo.Size = new System.Drawing.Size(200, 13);
-            this.linkRepo.TabIndex = 23;
-            this.linkRepo.TabStop = true;
-            this.linkRepo.Text = "https://github.com/mkitchingh/Smtp-Relay";
-            this.linkRepo.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkRepo_LinkClicked);
-            // 
-            // labelServiceStatus
-            // 
-            this.labelServiceStatus.AutoSize = true;
             this.labelServiceStatus.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Bold);
-            this.labelServiceStatus.Location = new System.Drawing.Point(20, 720);
-            this.labelServiceStatus.Name = "labelServiceStatus";
-            this.labelServiceStatus.Size = new System.Drawing.Size(119, 19);
-            this.labelServiceStatus.TabIndex = 24;
-            this.labelServiceStatus.Text = "Service Status...";
+            this.tableLayout.Controls.Add(this.labelServiceStatus, 1, 9);
+
+            // 
+            // Row 10: Version
+            // 
+            this.tableLayout.Controls.Add(this.lblVersion, 0, 10);
+            this.tableLayout.Controls.Add(this.linkRepo, 1, 10);
+
             // 
             // MainForm
             // 
-            this.ClientSize = new System.Drawing.Size(1000, 800);
-            this.Controls.Add(this.labelServiceStatus);
-            this.Controls.Add(this.linkRepo);
-            this.Controls.Add(this.lblVersion);
-            this.Controls.Add(this.btnClose);
-            this.Controls.Add(this.btnSave);
-            this.Controls.Add(this.btnViewLogs);
-            this.Controls.Add(this.numDaysKept);
-            this.Controls.Add(this.lblDaysKept);
-            this.Controls.Add(this.chkEnableLogging);
-            this.Controls.Add(this.lblLogging);
-            this.Controls.Add(this.lblIpSample);
-            this.Controls.Add(this.txtIpList);
-            this.Controls.Add(this.lblIpList);
-            this.Controls.Add(this.radioAllowList);
-            this.Controls.Add(this.radioAllowAll);
-            this.Controls.Add(this.lblRestrictions);
-            this.Controls.Add(this.txtPassword);
-            this.Controls.Add(this.lblPassword);
-            this.Controls.Add(this.txtUsername);
-            this.Controls.Add(this.lblUsername);
-            this.Controls.Add(this.chkStartTls);
-            this.Controls.Add(this.numPort);
-            this.Controls.Add(this.lblPort);
-            this.Controls.Add(this.txtSmtpHost);
-            this.Controls.Add(this.lblSmtpHost);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.MaximizeBox = false;
-            this.Name = "MainForm";
+            this.ClientSize = new System.Drawing.Size(800, 600);
+            this.Controls.Add(this.tableLayout);
             this.Text = "SMTP Relay Configuration";
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Sizable;
+            this.MinimumSize = new System.Drawing.Size(600, 500);
             ((System.ComponentModel.ISupportInitialize)(this.numPort)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numDaysKept)).EndInit();
             this.ResumeLayout(false);
