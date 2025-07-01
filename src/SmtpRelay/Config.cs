@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
 using System.Text.Json;
 using NetTools;
 
@@ -10,57 +8,47 @@ namespace SmtpRelay
 {
     public class Config
     {
-        private const string FileName = "config.json";
-        private static readonly string _path = Path.Combine(
+        private static readonly string ConfigFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            "SMTP Relay", "service", FileName);
+            "SMTP Relay", "service", "config.json");
 
-        public string SmartHost { get; set; } = "localhost";
+        public string SmartHost { get; set; } = string.Empty;
         public int SmartHostPort { get; set; } = 25;
-        public string? Username { get; set; }
-        public string? Password { get; set; }
-        public bool UseStartTls { get; set; }
-        public bool AllowAllIPs { get; set; } = true;
-        public List<string> AllowedIPs { get; set; } = new();
-        public bool EnableLogging { get; set; } = true;
-        public int RetentionDays { get; set; } = 7;
+        public string? Username  { get; set; }
+        public string? Password  { get; set; }
+        public bool   UseStartTls   { get; set; } = false;
+        public bool   AllowAllIPs   { get; set; } = true;
+        public List<string>? AllowedIPs   { get; set; } = new();
+        public bool   EnableLogging { get; set; } = false;
+        public int    RetentionDays { get; set; } = 7;
 
         public static Config Load()
         {
-            if (!File.Exists(_path))
+            if (!File.Exists(ConfigFilePath))
             {
-                var fresh = new Config();
-                Save(fresh);
-                return fresh;
+                var cfg = new Config();
+                cfg.Save();
+                return cfg;
             }
 
-            var json = File.ReadAllText(_path);
-            return JsonSerializer.Deserialize<Config>(json)!
-                   ?? throw new InvalidOperationException("Failed to parse config.json");
+            var json = File.ReadAllText(ConfigFilePath);
+            return JsonSerializer.Deserialize<Config>(json)!;
         }
 
-        public static void Save(Config cfg)
+        public void Save()
         {
-            // Validate each CIDR/IP if not AllowAll
-            if (!cfg.AllowAllIPs)
+            if (!AllowAllIPs && AllowedIPs is not null)
             {
-                foreach (var entry in cfg.AllowedIPs)
+                // validate each entry or throw
+                foreach (var entry in AllowedIPs)
                 {
-                    IPAddressRange.Parse(entry.Trim());
+                    _ = IPAddressRange.Parse(entry);
                 }
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
             var options = new JsonSerializerOptions { WriteIndented = true };
-            File.WriteAllText(_path, JsonSerializer.Serialize(cfg, options));
-        }
-
-        public bool IsAllowed(IPAddress address)
-        {
-            if (AllowAllIPs) return true;
-            return AllowedIPs
-                .Select(e => IPAddressRange.Parse(e.Trim()))
-                .Any(r => r.Contains(address));
+            var json    = JsonSerializer.Serialize(this, options);
+            File.WriteAllText(ConfigFilePath, json);
         }
     }
 }
