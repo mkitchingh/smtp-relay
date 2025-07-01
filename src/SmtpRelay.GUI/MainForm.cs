@@ -1,6 +1,9 @@
+// File: src/SmtpRelay.GUI/MainForm.cs
+
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.ServiceProcess;
 using System.Windows.Forms;
 
@@ -39,6 +42,7 @@ namespace SmtpRelay.GUI
 
         private void btnViewLogs_Click(object sender, EventArgs e)
         {
+            // Opens the actual log folder under Program Files
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(
                     Environment.SpecialFolder.ProgramFiles),
@@ -48,7 +52,7 @@ namespace SmtpRelay.GUI
 
         private void btnSave_Click(object sender, EventArgs e)
         {
-            // your existing save logic...
+            // Your existing save logic goes here...
             UpdateServiceStatus();
         }
 
