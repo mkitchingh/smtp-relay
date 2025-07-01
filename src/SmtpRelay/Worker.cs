@@ -17,20 +17,20 @@ namespace SmtpRelay
     public class Worker : BackgroundService
     {
         readonly ILogger<Worker> _log;
-        readonly Config          _cfg;
+        readonly Config _cfg;
         readonly IPAddressRange[] _ranges;
 
         public Worker(ILogger<Worker> log)
         {
-            _log    = log;
-            _cfg    = Config.Load();
+            _log   = log;
+            _cfg   = Config.Load();
             _ranges = _cfg.AllowAllIPs
                 ? Array.Empty<IPAddressRange>()
                 : _cfg.AllowedIPs.Select(IPAddressRange.Parse).ToArray();
 
             _log.LogInformation(_cfg.AllowAllIPs
                 ? "Relay mode: Allow ALL IPs"
-                : "Relay mode: Allow {Count} range(s)", _ranges.Length);
+                : $"Relay mode: Allow {_ranges.Length} range(s)");
         }
 
         protected override Task ExecuteAsync(CancellationToken token)
@@ -48,33 +48,34 @@ namespace SmtpRelay
                 .StartAsync(token);
         }
 
-        // ── Message store that enforces IP allow‐list ─────────────
-        sealed class RelayStore : MessageStore
+        // ── Nested class enforcing allow-list ───────────────────────
+        private sealed class RelayStore : MessageStore
         {
-            readonly Config          _cfg;
+            readonly Config _cfg;
             readonly IPAddressRange[] _ranges;
-            readonly ILogger         _log;
+            readonly ILogger _log;
 
             public RelayStore(Config cfg, IPAddressRange[] ranges, ILogger log)
             {
-                _cfg    = cfg;
+                _cfg = cfg;
                 _ranges = ranges;
-                _log    = log;
+                _log = log;
             }
 
             public override async Task<SmtpResponse> SaveAsync(
-                ISessionContext ctx,
-                IMessageTransaction _,
+                ISessionContext context,
+                IMessageTransaction transaction,
                 ReadOnlySequence<byte> buffer,
-                CancellationToken ct)
+                CancellationToken cancellationToken)
             {
-                // Use the correct property key for the remote endpoint
-                IPAddress? ip = null;
-                if (ctx.Properties.TryGetValue("RemoteEndPoint", out var obj)
-                    && obj is IPEndPoint ep)
-                {
-                    ip = ep.Address;
-                }
+                // Extract whichever IPEndPoint is in the context properties
+                IPAddress? ip = context.Properties
+                    .Values
+                    .OfType<IPEndPoint>()
+                    .Select(ep => ep.Address)
+                    .FirstOrDefault();
+
+                _log.LogInformation("Incoming relay request from {IP}", ip);
 
                 bool allowed = _cfg.AllowAllIPs
                             || _ranges.Length == 0
@@ -90,7 +91,7 @@ namespace SmtpRelay
 
                 try
                 {
-                    await MailSender.SendAsync(_cfg, buffer, ct);
+                    await MailSender.SendAsync(_cfg, buffer, cancellationToken);
                     _log.LogInformation("Relayed mail from {IP}", ip);
                     return SmtpResponse.Ok;
                 }
