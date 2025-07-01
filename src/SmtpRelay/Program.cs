@@ -11,34 +11,42 @@ namespace SmtpRelay
     {
         static void Main(string[] args)
         {
-            // Base/service directories
+            // Prepare directories
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "SMTP Relay", "service");
             var logDir = Path.Combine(baseDir, "logs");
             Directory.CreateDirectory(logDir);
 
-            // Read retention from config
+            // Load retention from config.json
             var cfg = Config.Load();
             var retention = cfg.RetentionDays;
 
-            // Serilog: app logs + SMTP-only logs
+            // Paths
+            var appLogPath  = Path.Combine(logDir, "app-.log");
+            var smtpLogPath = Path.Combine(logDir, "smtp-.log");
+
+            // Configure Serilog
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
-                // General application log
+
+                // 1) General application log
                 .WriteTo.File(
-                    Path.Combine(logDir, "app-.log"),
+                    appLogPath,
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: retention)
-                // Dedicated SMTP-only log using a lambda filter
-                .WriteTo.Logger(lc => lc
-                    .Filter.ByIncludingOnly(le =>
-                        le.Properties.TryGetValue("SourceContext", out var sc) &&
+
+                // 2) Dedicated SMTP log, filtering on SourceContext
+                .WriteTo.File(
+                    smtpLogPath,
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: retention,
+                    restrictedToMinimumLevel: LogEventLevel.Information,
+                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
+                    filter: logEvent =>
+                        logEvent.Properties.TryGetValue("SourceContext", out var sc) &&
                         sc.ToString().Contains("SmtpServer"))
-                    .WriteTo.File(
-                        Path.Combine(logDir, "smtp-.log"),
-                        rollingInterval: RollingInterval.Day,
-                        retainedFileCountLimit: retention))
+
                 .CreateLogger();
 
             try
