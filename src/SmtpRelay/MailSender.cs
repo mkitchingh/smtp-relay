@@ -29,14 +29,14 @@ namespace SmtpRelay
             // Ensure logs directory exists
             Directory.CreateDirectory(LogDir);
 
-            // Build today's protocol log file
-            var protocolLogPath = Path.Combine(
+            // Protocol transcript file: smtp-proto-YYYYMMDD.log
+            var protoPath = Path.Combine(
                 LogDir,
-                $"smtp-{DateTime.Now:yyyyMMdd}.log");
+                $"smtp-proto-{DateTime.Now:yyyyMMdd}.log");
 
-            // Create the client with a ProtocolLogger
+            // Attach ProtocolLogger (appending) to capture full SMTP conversation
             using var client = new SmtpClient(
-                new ProtocolLogger(protocolLogPath));
+                new ProtocolLogger(protoPath, append: true));
 
             try
             {
@@ -45,25 +45,25 @@ namespace SmtpRelay
                     cfg.SmartHost, cfg.SmartHostPort, cfg.UseStartTls);
 
                 await client.ConnectAsync(
-                    cfg.SmartHost,
-                    cfg.SmartHostPort,
-                    cfg.UseStartTls
-                        ? SecureSocketOptions.StartTls
-                        : SecureSocketOptions.None,
-                    ct)
+                        cfg.SmartHost,
+                        cfg.SmartHostPort,
+                        cfg.UseStartTls
+                            ? SecureSocketOptions.StartTls
+                            : SecureSocketOptions.None,
+                        ct)
                     .ConfigureAwait(false);
 
                 if (!string.IsNullOrWhiteSpace(cfg.Username))
                 {
                     Log.Information("Authenticating as {User}", cfg.Username);
                     await client.AuthenticateAsync(
-                        cfg.Username,
-                        cfg.Password,
-                        ct)
+                            cfg.Username,
+                            cfg.Password,
+                            ct)
                         .ConfigureAwait(false);
                 }
 
-                // Load the message from the buffer
+                // Load the incoming message
                 using var ms = new MemoryStream(buffer.ToArray());
                 var message = await MimeMessage.LoadAsync(ms, ct)
                                              .ConfigureAwait(false);
@@ -77,6 +77,7 @@ namespace SmtpRelay
 
                 await client.DisconnectAsync(true, ct)
                             .ConfigureAwait(false);
+
                 Log.Information("Smarthost relay complete");
             }
             catch (Exception ex)
