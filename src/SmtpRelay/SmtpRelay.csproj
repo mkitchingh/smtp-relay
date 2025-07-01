@@ -1,25 +1,31 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <OutputType>Exe</OutputType>
-    <UseWindowsService>true</UseWindowsService>
-    <PublishSingleFile>true</PublishSingleFile>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- Self-contained single-file deployment -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
     <PublishTrimmed>true</PublishTrimmed>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Serilog for app + filtered SMTP‐only logs -->
+    <!-- Core logging -->
+    <PackageReference Include="Serilog" Version="2.12.0" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
-    <PackageReference Include="Serilog.Filters.Expressions" Version="3.4.0" />
-    <!-- SMTP server & relay dependencies -->
+    <!-- Expression-based filtering (deprecated but stable) -->
+    <PackageReference Include="Serilog.Filters.Expressions" Version="2.1.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.1.0" />
+
+    <!-- SMTP server implementation -->
     <PackageReference Include="SmtpServer" Version="11.0.0" />
-    <PackageReference Include="MailKit" Version="4.2.0" />
-    <!-- IP range parsing library -->
-    <PackageReference Include="IPAddressRange" Version="6.2.0" />
+    <!-- MailKit/MimeKit for smart-host delivery -->
+    <PackageReference Include="MailKit" Version="4.0.0" />
+    <PackageReference Include="MimeKit" Version="4.4.0" />
+
+    <!-- IP range parsing -->
+    <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
   </ItemGroup>
+
 </Project>
