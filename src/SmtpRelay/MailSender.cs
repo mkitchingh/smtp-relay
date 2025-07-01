@@ -1,9 +1,12 @@
+// File: src/SmtpRelay/MailSender.cs
+
 using System;
 using System.IO;
 using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
 using MailKit.Net.Smtp;
+using MailKit.Security;
 using MimeKit;
 using Serilog;
 
@@ -26,7 +29,7 @@ namespace SmtpRelay
             // Ensure logs directory exists
             Directory.CreateDirectory(LogDir);
 
-            // Filtered protocol transcript: smtp-proto-YYYYMMDD.log
+            // Trimmed protocol transcript: smtp-proto-YYYYMMDD.log
             var protoPath = Path.Combine(
                 LogDir,
                 $"smtp-proto-{DateTime.Now:yyyyMMdd}.log");
@@ -41,10 +44,15 @@ namespace SmtpRelay
                     "Connecting to {Host}:{Port} (STARTTLS={Tls})",
                     cfg.SmartHost, cfg.SmartHostPort, cfg.UseStartTls);
 
+                // **Use SecureSocketOptions to distinguish STARTTLS vs. None vs. SslOnConnect**
+                var socketOpts = cfg.UseStartTls
+                    ? SecureSocketOptions.StartTls
+                    : SecureSocketOptions.None;
+
                 await client.ConnectAsync(
                         cfg.SmartHost,
                         cfg.SmartHostPort,
-                        cfg.UseStartTls,
+                        socketOpts,
                         ct)
                     .ConfigureAwait(false);
 
