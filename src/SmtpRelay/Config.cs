@@ -1,51 +1,61 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using IPAddressRange;   // <— This import is required for IPAddressRange to resolve
+using IPAddressRange;  // from the IPAddressRange NuGet package
 
 namespace SmtpRelay
 {
     public class Config
     {
-        private const string FileName = "config.json";
+        public string SmartHost { get; set; } = "";
+        public int SmartHostPort { get; set; }
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+        public bool UseStartTls { get; set; }
+        public bool AllowAllIPs { get; set; }
+        public string AllowedIPs { get; set; } = "";
+        public bool EnableLogging { get; set; }
+        public int RetentionDays { get; set; }
 
-        public string   SmartHost      { get; set; } = "";
-        public int      SmartHostPort  { get; set; } = 25;
-        public string?  Username       { get; set; }
-        public string?  Password       { get; set; }
-        public bool     UseStartTls    { get; set; }
-        public bool     AllowAllIPs    { get; set; } = true;
-        public List<string> AllowedIPs { get; set; } = new();
-        public bool     EnableLogging  { get; set; }
-        public int      RetentionDays  { get; set; } = 7;
+        private static readonly string ConfigPath =
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                "SMTP Relay", "config.json"
+            );
 
         public static Config Load()
         {
-            if (!File.Exists(FileName))
+            if (!File.Exists(ConfigPath))
                 return new Config();
 
-            var json = File.ReadAllText(FileName);
-            return JsonSerializer.Deserialize<Config>(json)!
-                   ?? new Config();
+            var json = File.ReadAllText(ConfigPath);
+            return JsonSerializer.Deserialize<Config>(json) ?? new Config();
         }
 
         public void Save()
         {
-            // Validate the comma-separated list of ranges
+            // Ensure folder exists
+            var dir = Path.GetDirectoryName(ConfigPath)!;
+            Directory.CreateDirectory(dir);
+
+            // If we’re restricting IPs, split on commas or semicolons and parse each
             if (!AllowAllIPs)
             {
-                // throws FormatException if any entry is invalid
-                _ = AllowedIPs
+                var parsed = AllowedIPs
+                    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(s => s.Trim())
-                    .Select(s => new IPAddressRange.IPAddressRange(s))
+                    .Select(s => IPAddressRange.Parse(s))
                     .ToList();
+
+                // Re-serialize back to normalized comma list
+                AllowedIPs = string.Join(",", parsed.Select(r => r.ToString()));
             }
 
-            // Serialize back to disk
-            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(FileName, json);
+            // Write out JSON
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var json = JsonSerializer.Serialize(this, options);
+            File.WriteAllText(ConfigPath, json);
         }
     }
 }
