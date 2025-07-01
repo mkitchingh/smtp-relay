@@ -8,21 +8,26 @@
     <PublishTrimmed>true</PublishTrimmed>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- treat warnings as errors except NU1903 -->
+    <WarningsAsErrors>$(WarningsAsErrors);NU1605;NU1102</WarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- core SMTP server -->
+    <!-- Minimal SMTP server library -->
     <PackageReference Include="SmtpServer" Version="11.0.0" />
 
-    <!-- IP/netmask parsing -->
+    <!-- IP/subnet parsing -->
     <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
 
-    <!-- MIME + SMTP client -->
+    <!-- MailKit/MimeKit for outbound relay -->
     <PackageReference Include="MailKit" Version="4.1.0" />
     <PackageReference Include="MimeKit" Version="4.4.0" />
 
-    <!-- Structured logging -->
+    <!-- Serilog integration -->
     <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+
+    <!-- Microsoft logging abstractions -->
+    <FrameworkReference Include="Microsoft.Extensions.Logging" />
   </ItemGroup>
 </Project>
