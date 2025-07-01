@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Collections.Generic;
 using MailKit;
 
 namespace SmtpRelay
@@ -20,9 +21,8 @@ namespace SmtpRelay
             _filePath = filePath;
         }
 
-        // Prevent redaction: no secrets are filtered from auth exchanges
-        public IAuthenticationSecretDetector AuthenticationSecretDetector =>
-            new NoOpSecretDetector();
+        // Required by interface: no-op detector
+        public IAuthenticationSecretDetector AuthenticationSecretDetector { get; set; } = new NoOpSecretDetector();
 
         // Log when the connection is opened
         public void LogConnect(Uri uri)
@@ -48,7 +48,7 @@ namespace SmtpRelay
 
         private void ProcessLine(string prefix, string line)
         {
-            // Skip DATA body content until terminator "."
+            // Skip DATA body content until terminator '.'
             if (_inData)
             {
                 if (line == ".") _inData = false;
@@ -58,7 +58,6 @@ namespace SmtpRelay
             {
                 _inData = true;
             }
-
             WriteLine($"{prefix} {line}");
         }
 
@@ -81,8 +80,11 @@ namespace SmtpRelay
         // A no-op secret detector so authentication secrets aren't redacted
         private class NoOpSecretDetector : IAuthenticationSecretDetector
         {
-            public bool CanTest(string authenticationMethod) => false;
-            public bool IsSecret(byte[] buffer, int offset, int count) => false;
+            public IList<AuthenticationSecret> DetectSecrets(byte[] buffer, int offset, int count)
+            {
+                // No secrets filtered
+                return Array.Empty<AuthenticationSecret>();
+            }
         }
     }
 }
