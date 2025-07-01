@@ -75,155 +75,160 @@ namespace SmtpRelay.GUI
             this.SuspendLayout();
 
             // MainForm
-            this.ClientSize               = new Size(480, 520);
-            this.FormBorderStyle          = FormBorderStyle.FixedDialog;
-            this.MaximizeBox              = false;
-            this.StartPosition            = FormStartPosition.CenterScreen;
-            this.Text                     = "SMTP Relay Configuration";
-            this.Font                     = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            this.AutoScaleMode           = AutoScaleMode.Font;
+            this.ClientSize              = new Size(800, 600);
+            this.MinimumSize             = new Size(800, 600);
+            this.FormBorderStyle         = FormBorderStyle.Sizable;
+            this.StartPosition           = FormStartPosition.CenterScreen;
+            this.Text                    = "SMTP Relay Configuration";
+            this.Font                    = new Font("Segoe UI",  nineF:9F, FontStyle.Regular, GraphicsUnit.Point);
 
             // labelHost
-            this.labelHost.AutoSize       = true;
-            this.labelHost.Location       = new Point(20, 20);
-            this.labelHost.Text           = "SMTP Host:";
+            this.labelHost.AutoSize      = true;
+            this.labelHost.Location      = new Point(30, 30);
+            this.labelHost.Text          = "SMTP Host:";
 
             // txtHost
-            this.txtHost.Location         = new Point(120, 17);
-            this.txtHost.Size             = new Size(330, 23);
+            this.txtHost.Location        = new Point(150, 27);
+            this.txtHost.Size            = new Size(600, 25);
+            this.txtHost.Anchor          = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
             // labelPort
-            this.labelPort.AutoSize       = true;
-            this.labelPort.Location       = new Point(20, 60);
-            this.labelPort.Text           = "Port:";
+            this.labelPort.AutoSize      = true;
+            this.labelPort.Location      = new Point(30, 80);
+            this.labelPort.Text          = "Port:";
 
             // numPort
-            this.numPort.Location         = new Point(120, 57);
-            this.numPort.Maximum          = 65535;
-            this.numPort.Minimum          = 1;
-            this.numPort.Value            = 25;
-            this.numPort.Size             = new Size(60, 23);
+            this.numPort.Location        = new Point(150, 77);
+            this.numPort.Maximum         = 65535;
+            this.numPort.Minimum         = 1;
+            this.numPort.Value           = 25;
+            this.numPort.Size            = new Size(80, 25);
 
             // chkStartTls
-            this.chkStartTls.AutoSize     = true;
-            this.chkStartTls.Location     = new Point(200, 59);
-            this.chkStartTls.Text         = "STARTTLS";
+            this.chkStartTls.AutoSize    = true;
+            this.chkStartTls.Location    = new Point(260, 79);
+            this.chkStartTls.Text        = "STARTTLS";
             this.chkStartTls.CheckedChanged += chkStartTls_CheckedChanged;
 
             // lblUsername
-            this.lblUsername.AutoSize     = true;
-            this.lblUsername.Location     = new Point(20, 100);
-            this.lblUsername.Text         = "Username:";
+            this.lblUsername.AutoSize    = true;
+            this.lblUsername.Location    = new Point(30, 130);
+            this.lblUsername.Text        = "Username:";
 
             // txtUsername
-            this.txtUsername.Location     = new Point(120, 97);
-            this.txtUsername.Size         = new Size(330, 23);
-            this.txtUsername.Enabled      = false;
+            this.txtUsername.Location    = new Point(150, 127);
+            this.txtUsername.Size        = new Size(600, 25);
+            this.txtUsername.Anchor      = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this.txtUsername.Enabled     = false;
 
             // lblPassword
-            this.lblPassword.AutoSize     = true;
-            this.lblPassword.Location     = new Point(20, 140);
-            this.lblPassword.Text         = "Password:";
+            this.lblPassword.AutoSize    = true;
+            this.lblPassword.Location    = new Point(30, 180);
+            this.lblPassword.Text        = "Password:";
 
             // txtPassword
-            this.txtPassword.Location     = new Point(120, 137);
-            this.txtPassword.Size         = new Size(330, 23);
-            this.txtPassword.PasswordChar = '●';
-            this.txtPassword.Enabled      = false;
+            this.txtPassword.Location    = new Point(150, 177);
+            this.txtPassword.Size        = new Size(600, 25);
+            this.txtPassword.Anchor      = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this.txtPassword.PasswordChar= '●';
+            this.txtPassword.Enabled     = false;
 
             // labelRelayRestrictions
             this.labelRelayRestrictions.AutoSize = true;
-            this.labelRelayRestrictions.Location = new Point(20, 180);
+            this.labelRelayRestrictions.Location = new Point(30, 230);
             this.labelRelayRestrictions.Text     = "Relay Restrictions:";
 
             // radioAllowAll
-            this.radioAllowAll.AutoSize    = true;
-            this.radioAllowAll.Location    = new Point(160, 178);
-            this.radioAllowAll.Text        = "Allow All";
-            this.radioAllowAll.Checked     = true;
+            this.radioAllowAll.AutoSize     = true;
+            this.radioAllowAll.Location     = new Point(200, 228);
+            this.radioAllowAll.Text         = "Allow All";
+            this.radioAllowAll.Checked      = true;
             this.radioAllowAll.CheckedChanged += radioAllowRestrictions_CheckedChanged;
 
             // radioAllowList
-            this.radioAllowList.AutoSize   = true;
-            this.radioAllowList.Location   = new Point(250, 178);
-            this.radioAllowList.Text       = "Allow Specified";
+            this.radioAllowList.AutoSize    = true;
+            this.radioAllowList.Location    = new Point(310, 228);
+            this.radioAllowList.Text        = "Allow Specified";
             this.radioAllowList.CheckedChanged += radioAllowRestrictions_CheckedChanged;
 
             // txtIpList
-            this.txtIpList.Location        = new Point(120, 205);
-            this.txtIpList.Multiline       = true;
-            this.txtIpList.Size            = new Size(330, 60);
-            this.txtIpList.Enabled         = false;
-            this.txtIpList.ScrollBars      = ScrollBars.Vertical;
+            this.txtIpList.Location         = new Point(150, 260);
+            this.txtIpList.Multiline        = true;
+            this.txtIpList.Size             = new Size(600, 80);
+            this.txtIpList.Anchor           = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            this.txtIpList.Enabled          = false;
+            this.txtIpList.ScrollBars       = ScrollBars.Vertical;
 
             // labelIpExample
-            this.labelIpExample.AutoSize   = true;
-            this.labelIpExample.ForeColor  = Color.Gray;
-            this.labelIpExample.Location   = new Point(120, 270);
-            this.labelIpExample.Text       = "e.g. 127.0.0.1, 10.0.0.0/24, ::1";
+            this.labelIpExample.AutoSize    = true;
+            this.labelIpExample.ForeColor   = Color.Gray;
+            this.labelIpExample.Location    = new Point(150, 350);
+            this.labelIpExample.Text        = "e.g. 127.0.0.1, 10.0.0.0/24, ::1";
 
             // lblLogging
-            this.lblLogging.AutoSize       = true;
-            this.lblLogging.Location       = new Point(20, 310);
-            this.lblLogging.Text           = "Logging:";
+            this.lblLogging.AutoSize        = true;
+            this.lblLogging.Location        = new Point(30, 400);
+            this.lblLogging.Text            = "Logging:";
 
             // chkEnableLogging
-            this.chkEnableLogging.AutoSize = true;
-            this.chkEnableLogging.Location = new Point(120, 308);
-            this.chkEnableLogging.Text     = "Enable";
+            this.chkEnableLogging.AutoSize  = true;
+            this.chkEnableLogging.Location  = new Point(150, 398);
+            this.chkEnableLogging.Text      = "Enable";
             this.chkEnableLogging.CheckedChanged += chkEnableLogging_CheckedChanged;
 
             // labelDaysKept
-            this.labelDaysKept.AutoSize    = true;
-            this.labelDaysKept.Location    = new Point(220, 310);
-            this.labelDaysKept.Text        = "Days Kept:";
+            this.labelDaysKept.AutoSize     = true;
+            this.labelDaysKept.Location     = new Point(260, 400);
+            this.labelDaysKept.Text         = "Days Kept:";
 
             // numRetentionDays
-            this.numRetentionDays.Location  = new Point(300, 307);
-            this.numRetentionDays.Maximum   = 365;
-            this.numRetentionDays.Minimum   = 1;
-            this.numRetentionDays.Value     = 30;
-            this.numRetentionDays.Size      = new Size(60, 23);
+            this.numRetentionDays.Location   = new Point(350, 397);
+            this.numRetentionDays.Maximum    = 365;
+            this.numRetentionDays.Minimum    = 1;
+            this.numRetentionDays.Value      = 30;
+            this.numRetentionDays.Size       = new Size(60, 25);
 
             // btnViewLogs
-            this.btnViewLogs.Location      = new Point(380, 304);
-            this.btnViewLogs.Size          = new Size(70, 27);
-            this.btnViewLogs.Text          = "View Logs";
-            this.btnViewLogs.Click         += btnViewLogs_Click;
+            this.btnViewLogs.Location       = new Point(450, 395);
+            this.btnViewLogs.Size           = new Size(100, 30);
+            this.btnViewLogs.Text           = "View Logs";
+            this.btnViewLogs.Click          += btnViewLogs_Click;
 
             // btnSave
-            this.btnSave.Location          = new Point(120, 350);
-            this.btnSave.Size              = new Size(120, 30);
-            this.btnSave.Text              = "Save and Restart";
-            this.btnSave.Click             += btnSave_Click;
+            this.btnSave.Location           = new Point(150, 460);
+            this.btnSave.Size               = new Size(100, 35);
+            this.btnSave.Text               = "Save";
+            this.btnSave.Click              += btnSave_Click;
 
             // btnClose
-            this.btnClose.Location         = new Point(260, 350);
-            this.btnClose.Size             = new Size(120, 30);
-            this.btnClose.Text             = "Close";
-            this.btnClose.Click            += btnClose_Click;
+            this.btnClose.Location          = new Point(270, 460);
+            this.btnClose.Size              = new Size(100, 35);
+            this.btnClose.Text              = "Close";
+            this.btnClose.Click             += btnClose_Click;
 
             // labelServiceStatusCaption
             this.labelServiceStatusCaption.AutoSize = true;
-            this.labelServiceStatusCaption.Font      = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.labelServiceStatusCaption.Location  = new Point(20, 400);
+            this.labelServiceStatusCaption.Font      = new Font("Segoe UI", nineF:9F, FontStyle.Bold);
+            this.labelServiceStatusCaption.Location  = new Point(30, 520);
             this.labelServiceStatusCaption.Text      = "Service Status:";
 
             // labelServiceStatus
             this.labelServiceStatus.AutoSize   = true;
-            this.labelServiceStatus.Font      = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.labelServiceStatus.Location  = new Point(120, 400);
+            this.labelServiceStatus.Font      = new Font("Segoe UI", nineF:9F, FontStyle.Bold);
+            this.labelServiceStatus.Location  = new Point(150, 520);
             this.labelServiceStatus.Text      = "Unknown";
 
             // lblVersion
-            this.lblVersion.AutoSize         = true;
-            this.lblVersion.Location         = new Point(20, 430);
-            this.lblVersion.Text             = "Version:";
+            this.lblVersion.AutoSize          = true;
+            this.lblVersion.Location          = new Point(600, 520);
+            this.lblVersion.Text              = $"Version: {Program.AppVersion}";
 
             // linkRepo
-            this.linkRepo.AutoSize           = true;
-            this.linkRepo.Location           = new Point(120, 430);
-            this.linkRepo.Text               = "https://github.com/mkitchingh/Smtp-Relay";
-            this.linkRepo.LinkClicked       += linkRepo_LinkClicked;
+            this.linkRepo.AutoSize            = true;
+            this.linkRepo.Location            = new Point(600, 550);
+            this.linkRepo.Text                = "https://github.com/mkitchingh/Smtp-Relay";
+            this.linkRepo.LinkClicked        += linkRepo_LinkClicked;
 
             // Add all controls
             this.Controls.AddRange(new Control[]
