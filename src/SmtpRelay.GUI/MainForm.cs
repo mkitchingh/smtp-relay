@@ -19,19 +19,28 @@ namespace SmtpRelay.GUI
         {
             InitializeComponent();
 
-            // discover the real Windows service by its display name
+            // --- Discover Windows‐service name by display name ---
             _serviceName = ServiceController
                 .GetServices()
                 .FirstOrDefault(s =>
                     s.DisplayName.Equals("SMTP Relay Service", StringComparison.OrdinalIgnoreCase))
                 ?.ServiceName ?? "SmtpRelay";
 
-            // set version to the FileVersion (e.g. 1.4.0.0)
-            var ver = FileVersionInfo
-                .GetVersionInfo(Assembly.GetExecutingAssembly().Location)
-                .ProductVersion;
+            // --- Safely get version from the running EXE, even in single‐file publish ---
+            var exeName = Assembly.GetExecutingAssembly().GetName().Name + ".exe";
+            var exePath = Path.Combine(AppContext.BaseDirectory, exeName);
+            string ver;
+            try
+            {
+                ver = FileVersionInfo.GetVersionInfo(exePath).ProductVersion;
+            }
+            catch
+            {
+                ver = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
+            }
             lblVersion.Text = $"Version: {ver}";
 
+            // Wire up initial states
             chkStartTls_CheckedChanged(null, EventArgs.Empty);
             radioAllowRestrictions_CheckedChanged(null, EventArgs.Empty);
             UpdateServiceStatus();
@@ -44,30 +53,32 @@ namespace SmtpRelay.GUI
                 using var sc = new ServiceController(_serviceName);
                 if (sc.Status == ServiceControllerStatus.Running)
                 {
-                    labelServiceStatus.Text = "Service Running";
-                    labelServiceStatus.ForeColor = Color.Green;
+                    labelServiceStatus.Text       = "Service Running";
+                    labelServiceStatus.ForeColor  = Color.Green;
                 }
                 else
                 {
-                    labelServiceStatus.Text = "Service Stopped";
-                    labelServiceStatus.ForeColor = Color.Red;
+                    labelServiceStatus.Text       = "Service Stopped";
+                    labelServiceStatus.ForeColor  = Color.Red;
                 }
             }
             catch
             {
-                labelServiceStatus.Text = "Service Unknown";
-                labelServiceStatus.ForeColor = Color.Gray;
+                labelServiceStatus.Text       = "Service Unknown";
+                labelServiceStatus.ForeColor  = Color.Gray;
             }
         }
 
         private void chkStartTls_CheckedChanged(object sender, EventArgs e)
         {
-            bool en = chkStartTls.Checked;
-            lblUsername.Enabled = en;
-            txtUsername.Enabled   = en;
-            lblPassword.Enabled   = en;
-            txtPassword.Enabled   = en;
-            numPort.Value         = en ? 587 : 25;
+            bool tls = chkStartTls.Checked;
+            lblUsername.Enabled  =
+            txtUsername.Enabled  =
+            lblPassword.Enabled  =
+            txtPassword.Enabled  = tls;
+
+            // default ports
+            numPort.Value = tls ? 587 : 25;
         }
 
         private void radioAllowRestrictions_CheckedChanged(object sender, EventArgs e)
@@ -77,18 +88,17 @@ namespace SmtpRelay.GUI
 
         private void btnViewLogs_Click(object sender, EventArgs e)
         {
-            var path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "SMTP Relay", "service", "logs");
-            if (Directory.Exists(path))
-                Process.Start("explorer.exe", path);
+            var logDir = Path.Combine(
+                AppContext.BaseDirectory, "logs");
+            if (Directory.Exists(logDir))
+                Process.Start("explorer.exe", logDir);
         }
 
         private void btnSave_Click(object sender, EventArgs e)
         {
-            // --- your existing SaveConfig() calls go here ---
+            // --- Your existing Config.Save(...) call goes here ---
 
-            // restart the Windows service
+            // Restart service
             try
             {
                 using var sc = new ServiceController(_serviceName);
@@ -99,25 +109,35 @@ namespace SmtpRelay.GUI
                 }
                 sc.Start();
                 sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
-                MessageBox.Show("Settings saved and service restarted.",
-                    "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                MessageBox.Show(
+                    "Settings saved and service restarted.",
+                    "Success",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to restart service:\n{ex.Message}",
-                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(
+                    $"Failed to restart service:\n{ex.Message}",
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
 
             UpdateServiceStatus();
         }
 
-        private void btnClose_Click(object sender, EventArgs e) => Close();
+        private void btnClose_Click(object sender, EventArgs e)
+        {
+            Close();
+        }
 
         private void linkRepo_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName      = linkRepo.Text,
+                FileName        = linkRepo.Text,
                 UseShellExecute = true
             });
         }
