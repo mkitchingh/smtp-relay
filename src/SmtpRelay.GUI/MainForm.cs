@@ -1,11 +1,6 @@
-// File: src/SmtpRelay.GUI/MainForm.cs
-
 using System;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.ServiceProcess;
 using System.Windows.Forms;
 
@@ -13,37 +8,31 @@ namespace SmtpRelay.GUI
 {
     public partial class MainForm : Form
     {
-        private readonly string _serviceName;
+        private readonly string _serviceName = "SmtpRelay";
 
         public MainForm()
         {
             InitializeComponent();
-
-            // --- Discover Windows‐service name by display name ---
-            _serviceName = ServiceController
-                .GetServices()
-                .FirstOrDefault(s =>
-                    s.DisplayName.Equals("SMTP Relay Service", StringComparison.OrdinalIgnoreCase))
-                ?.ServiceName ?? "SmtpRelay";
-
-            // --- Safely get version from the running EXE, even in single‐file publish ---
-            var exeName = Assembly.GetExecutingAssembly().GetName().Name + ".exe";
-            var exePath = Path.Combine(AppContext.BaseDirectory, exeName);
-            string ver;
-            try
-            {
-                ver = FileVersionInfo.GetVersionInfo(exePath).ProductVersion;
-            }
-            catch
-            {
-                ver = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
-            }
-            lblVersion.Text = $"Version: {ver}";
-
-            // Wire up initial states
-            chkStartTls_CheckedChanged(null, EventArgs.Empty);
-            radioAllowRestrictions_CheckedChanged(null, EventArgs.Empty);
+            LoadConfig();
             UpdateServiceStatus();
+            lblVersion.Text = Program.AppVersion;
+        }
+
+        private void LoadConfig()
+        {
+            var cfg = Config.Load();
+            txtHost.Text             = cfg.SmartHost;
+            numPort.Value            = cfg.SmartHostPort;
+            chkStartTls.Checked      = cfg.UseStartTls;
+            txtUsername.Text         = cfg.Username;
+            txtPassword.Text         = cfg.Password;
+            radioAllowAll.Checked    = cfg.AllowAllIPs;
+            radioAllowList.Checked   = !cfg.AllowAllIPs;
+            txtIpList.Text           = string.Join(Environment.NewLine, cfg.AllowedIPs);
+            chkEnableLogging.Checked = cfg.EnableLogging;
+            numRetentionDays.Value   = cfg.RetentionDays;
+            ToggleAuthFields();
+            ToggleIpField();
         }
 
         private void UpdateServiceStatus()
@@ -51,93 +40,102 @@ namespace SmtpRelay.GUI
             try
             {
                 using var sc = new ServiceController(_serviceName);
-                if (sc.Status == ServiceControllerStatus.Running)
-                {
-                    labelServiceStatus.Text       = "Service Running";
-                    labelServiceStatus.ForeColor  = Color.Green;
-                }
-                else
-                {
-                    labelServiceStatus.Text       = "Service Stopped";
-                    labelServiceStatus.ForeColor  = Color.Red;
-                }
+                var status = sc.Status;
+                labelServiceStatus.Text = status == ServiceControllerStatus.Running
+                    ? "Running"
+                    : "Stopped";
+                labelServiceStatus.ForeColor = status == ServiceControllerStatus.Running
+                    ? Color.Green
+                    : Color.Red;
             }
             catch
             {
-                labelServiceStatus.Text       = "Service Unknown";
-                labelServiceStatus.ForeColor  = Color.Gray;
+                labelServiceStatus.Text = "Unknown";
+                labelServiceStatus.ForeColor = Color.Orange;
             }
         }
 
         private void chkStartTls_CheckedChanged(object sender, EventArgs e)
         {
-            bool tls = chkStartTls.Checked;
-            lblUsername.Enabled  =
-            txtUsername.Enabled  =
-            lblPassword.Enabled  =
-            txtPassword.Enabled  = tls;
+            ToggleAuthFields();
+            numPort.Value = chkStartTls.Checked ? 587 : 25;
+        }
 
-            // default ports
-            numPort.Value = tls ? 587 : 25;
+        private void ToggleAuthFields()
+        {
+            txtUsername.Enabled = chkStartTls.Checked;
+            txtPassword.Enabled = chkStartTls.Checked;
         }
 
         private void radioAllowRestrictions_CheckedChanged(object sender, EventArgs e)
         {
+            ToggleIpField();
+        }
+
+        private void ToggleIpField()
+        {
             txtIpList.Enabled = radioAllowList.Checked;
+        }
+
+        private void chkEnableLogging_CheckedChanged(object sender, EventArgs e)
+        {
+            numRetentionDays.Enabled = chkEnableLogging.Checked;
+            btnViewLogs.Enabled      = chkEnableLogging.Checked;
         }
 
         private void btnViewLogs_Click(object sender, EventArgs e)
         {
-            var logDir = Path.Combine(
-                AppContext.BaseDirectory, "logs");
+            var logDir = Program.GetServiceLogDirectory();
             if (Directory.Exists(logDir))
                 Process.Start("explorer.exe", logDir);
+            else
+                MessageBox.Show("Log folder not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         private void btnSave_Click(object sender, EventArgs e)
         {
-            // --- Your existing Config.Save(...) call goes here ---
+            var cfg = new Config
+            {
+                SmartHost     = txtHost.Text.Trim(),
+                SmartHostPort = (int)numPort.Value,
+                UseStartTls   = chkStartTls.Checked,
+                Username      = txtUsername.Text,
+                Password      = txtPassword.Text,
+                AllowAllIPs   = radioAllowAll.Checked,
+                AllowedIPs    = txtIpList.Lines,
+                EnableLogging = chkEnableLogging.Checked,
+                RetentionDays = (int)numRetentionDays.Value
+            };
+            cfg.Save();
 
-            // Restart service
+            // restart service
             try
             {
                 using var sc = new ServiceController(_serviceName);
-                if (sc.Status == ServiceControllerStatus.Running)
-                {
-                    sc.Stop();
-                    sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
-                }
+                sc.Stop();
+                sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(10));
                 sc.Start();
-                sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
-
-                MessageBox.Show(
-                    "Settings saved and service restarted.",
-                    "Success",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(10));
+                MessageBox.Show("Settings saved and service restarted.", "Success",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                UpdateServiceStatus();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Failed to restart service:\n{ex.Message}",
-                    "Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                MessageBox.Show($"Failed to restart service: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
-            UpdateServiceStatus();
         }
 
         private void btnClose_Click(object sender, EventArgs e)
         {
-            Close();
+            this.Close();
         }
 
         private void linkRepo_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start(new ProcessStartInfo
+            Process.Start(new ProcessStartInfo(e.Link.LinkData as string ?? linkRepo.Text)
             {
-                FileName        = linkRepo.Text,
                 UseShellExecute = true
             });
         }
