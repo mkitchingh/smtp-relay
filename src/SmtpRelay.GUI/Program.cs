@@ -7,15 +7,10 @@ namespace SmtpRelay.GUI
 {
     internal static class Program
     {
-        /// <summary>
-        /// Exposes the GUI assembly version (matches Installed Apps).
-        /// </summary>
-        public static string AppVersion =>
-            Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0";
+        // Hard-coded to match Installed Apps version
+        public static string AppVersion => "1.4";
 
-        /// <summary>
-        /// Returns the folder where the service writes logs.
-        /// </summary>
+        // Where the service writes its logs
         public static string GetServiceLogDirectory()
         {
             var baseDir = Path.Combine(
