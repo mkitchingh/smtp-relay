@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
   <PropertyGroup>
+    <!-- Produce a single, self-contained exe for win-x64 -->
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -8,18 +9,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Windows Service support -->
+    <!-- Run as a Windows Service -->
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
 
-    <!-- Logging -->
-    <PackageReference Include="Serilog.Extensions.Hosting" Version="8.0.1" />
-    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    <!-- Serilog for structured logging -->
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
+    <PackageReference Include="Serilog.Sinks.File"        Version="6.0.0" />
 
-    <!-- SMTP relay libraries -->
-    <PackageReference Include="MailKit" Version="4.2.0" />
-    <PackageReference Include="SmtpServer" Version="11.2.0" />
+    <!-- SMTP libraries -->
+    <PackageReference Include="MailKit"     Version="4.2.0" />
+    <PackageReference Include="SmtpServer"  Version="11.0.0" />
 
-    <!-- IP/CIDR parsing -->
+    <!-- Parsing CIDR/IP ranges -->
     <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
   </ItemGroup>
 </Project>
