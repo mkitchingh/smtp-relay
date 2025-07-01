@@ -1,130 +1,118 @@
 using System;
-using System.Diagnostics;
+using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.ServiceProcess;
 using System.Windows.Forms;
+using SmtpRelay;
 
 namespace SmtpRelay.GUI
 {
     public partial class MainForm : Form
     {
-        // MUST match the actual Windows Service short name
-        private const string ServiceName = "SMTPRelayService";
+        private readonly Timer _statusTimer;
 
         public MainForm()
         {
             InitializeComponent();
-            LoadConfig();
-            UpdateServiceStatus();
-        }
 
-        private void LoadConfig()
-        {
+            // load config into controls...
             var cfg = Config.Load();
-            txtHost.Text             = cfg.SmartHost;
-            numPort.Value            = cfg.SmartHostPort;
-            chkStartTls.Checked      = cfg.UseStartTls;
-            txtUsername.Text         = cfg.Username;
-            txtPassword.Text         = cfg.Password;
-            radioAllowAll.Checked    = cfg.AllowAllIPs;
-            radioAllowList.Checked   = !cfg.AllowAllIPs;
-            txtIpList.Lines          = cfg.AllowedIPs.ToArray();
+            txtHost.Text = cfg.SmartHost;
+            numPort.Value = cfg.SmartHostPort;
+            chkStartTls.Checked = cfg.UseStartTls;
+            txtUsername.Text = cfg.Username;
+            txtPassword.Text = cfg.Password;
+            radAllowAll.Checked = cfg.AllowAllIPs;
+            radAllowSpecified.Checked = !cfg.AllowAllIPs;
+            txtAllowedIPs.Lines = cfg.AllowedIPs.ToArray();
             chkEnableLogging.Checked = cfg.EnableLogging;
-            numRetentionDays.Value   = cfg.RetentionDays;
-            ToggleAuthFields();
-            ToggleIpField();
-            ToggleLoggingFields();
+            numDays.Value = Math.Max(1, cfg.RetentionDays);
+
+            // load icon
+            var ico = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "smtp.ico");
+            if (File.Exists(ico))
+                Icon = new Icon(ico);
+
+            // make form resizable
+            MinimumSize = new Size(500, 400);
+
+            // timer to refresh service status
+            _statusTimer = new Timer { Interval = 5000 };
+            _statusTimer.Tick += (s, e) => RefreshServiceStatus();
+            _statusTimer.Start();
+            RefreshServiceStatus();
+
+            // hookup enable/disable behavior
+            radAllowAll.CheckedChanged += (s, e) =>
+                txtAllowedIPs.Enabled = radAllowSpecified.Checked;
+            chkEnableLogging.CheckedChanged += (s, e) =>
+                numDays.Enabled = chkEnableLogging.Checked;
         }
 
-        private void UpdateServiceStatus()
+        private void RefreshServiceStatus()
         {
             try
             {
-                using var sc = new ServiceController(ServiceName);
-                var status = sc.Status;
-                labelServiceStatus.Text      = status == ServiceControllerStatus.Running ? "Running" : "Stopped";
-                labelServiceStatus.ForeColor = status == ServiceControllerStatus.Running ? Color.Green : Color.Red;
+                using var sc = new ServiceController("SMTP Relay");
+                var running = sc.Status == ServiceControllerStatus.Running;
+                labelServiceStatus.Text = running
+                    ? "Service Running"
+                    : "Service Stopped";
+                labelServiceStatus.ForeColor = running
+                    ? Color.Green
+                    : Color.Red;
             }
             catch
             {
-                labelServiceStatus.Text      = "Unknown";
-                labelServiceStatus.ForeColor = Color.Orange;
+                labelServiceStatus.Text = "Service Unknown";
+                labelServiceStatus.ForeColor = Color.Gray;
             }
-        }
-
-        private void chkStartTls_CheckedChanged(object sender, EventArgs e)
-        {
-            ToggleAuthFields();
-            numPort.Value = chkStartTls.Checked ? 587 : 25;
-        }
-
-        private void ToggleAuthFields()
-        {
-            txtUsername.Enabled = chkStartTls.Checked;
-            txtPassword.Enabled = chkStartTls.Checked;
-        }
-
-        private void radioAllowRestrictions_CheckedChanged(object sender, EventArgs e)
-        {
-            ToggleIpField();
-        }
-
-        private void ToggleIpField()
-        {
-            txtIpList.Enabled = radioAllowList.Checked;
-        }
-
-        private void chkEnableLogging_CheckedChanged(object sender, EventArgs e)
-        {
-            ToggleLoggingFields();
-        }
-
-        private void ToggleLoggingFields()
-        {
-            numRetentionDays.Enabled = chkEnableLogging.Checked;
-            btnViewLogs.Enabled      = chkEnableLogging.Checked;
-        }
-
-        private void btnViewLogs_Click(object sender, EventArgs e)
-        {
-            var logDir = Program.GetServiceLogDirectory();
-            if (Directory.Exists(logDir))
-                Process.Start("explorer.exe", logDir);
-            else
-                MessageBox.Show("Log folder not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         private void btnSave_Click(object sender, EventArgs e)
         {
             var cfg = new Config
             {
-                SmartHost     = txtHost.Text.Trim(),
-                SmartHostPort = (int)numPort.Value,
-                UseStartTls   = chkStartTls.Checked,
-                Username      = txtUsername.Text,
-                Password      = txtPassword.Text,
-                AllowAllIPs   = radioAllowAll.Checked,
-                AllowedIPs    = txtIpList.Lines.ToList(),
-                EnableLogging = chkEnableLogging.Checked,
-                RetentionDays = (int)numRetentionDays.Value
+                SmartHost      = txtHost.Text,
+                SmartHostPort  = (int)numPort.Value,
+                Username       = txtUsername.Text,
+                Password       = txtPassword.Text,
+                UseStartTls    = chkStartTls.Checked,
+                AllowAllIPs    = radAllowAll.Checked,
+                AllowedIPs     = radAllowAll.Checked
+                    ? new List<string>()
+                    : txtAllowedIPs.Lines.Where(l => !string.IsNullOrWhiteSpace(l)).ToList(),
+                EnableLogging  = chkEnableLogging.Checked,
+                RetentionDays  = (int)numDays.Value
             };
-            cfg.Save();
 
             try
             {
-                using var sc = new ServiceController(ServiceName);
-                sc.Stop();  sc.WaitForStatus(ServiceControllerStatus.Stopped,  TimeSpan.FromSeconds(10));
-                sc.Start(); sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(10));
-                MessageBox.Show("Settings saved and service restarted.", "Success",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                UpdateServiceStatus();
+                cfg.Save();
+
+                // restart the Windows service
+                using var sc = new ServiceController("SMTP Relay");
+                sc.Stop();
+                sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(10));
+                sc.Start();
+                sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(10));
+
+                MessageBox.Show(
+                    "Settings saved and service restarted.",
+                    "Success",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to restart service: {ex.Message}", "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(
+                    $"Error saving settings:\n{ex.Message}",
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
             }
         }
 
@@ -133,9 +121,11 @@ namespace SmtpRelay.GUI
             Close();
         }
 
-        private void linkRepo_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        private void btnViewLogs_Click(object sender, EventArgs e)
         {
-            Process.Start(new ProcessStartInfo(linkRepo.Text) { UseShellExecute = true });
+            var dir = Program.GetServiceLogDirectory();
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            System.Diagnostics.Process.Start("explorer.exe", dir);
         }
     }
 }
