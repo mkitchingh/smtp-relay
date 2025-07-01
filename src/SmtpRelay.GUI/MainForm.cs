@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.ServiceProcess;
 using System.Windows.Forms;
@@ -36,15 +37,33 @@ namespace SmtpRelay.GUI
             }
         }
 
+        private void btnViewLogs_Click(object sender, EventArgs e)
+        {
+            var baseDir = Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.ProgramFiles),
+                "SMTP Relay", "service", "logs");
+            Process.Start("explorer.exe", baseDir);
+        }
+
         private void btnSave_Click(object sender, EventArgs e)
         {
-            // Your existing save logic...
+            // your existing save logic...
             UpdateServiceStatus();
         }
 
         private void btnClose_Click(object sender, EventArgs e)
         {
             Close();
+        }
+
+        private void linkRepo_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = linkRepo.Text,
+                UseShellExecute = true
+            });
         }
     }
 }
