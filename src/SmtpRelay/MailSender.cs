@@ -11,11 +11,12 @@ namespace SmtpRelay
 {
     public static class MailSender
     {
-        static readonly string BaseDir = Path.Combine(
+        private static readonly string BaseDir = Path.Combine(
             Environment.GetFolderPath(
                 Environment.SpecialFolder.ProgramFiles),
             "SMTP Relay", "service");
-        static readonly string LogDir = Path.Combine(BaseDir, "logs");
+
+        private static readonly string LogDir = Path.Combine(BaseDir, "logs");
 
         public static async Task SendAsync(
             Config cfg,
@@ -25,12 +26,12 @@ namespace SmtpRelay
             // Ensure logs directory exists
             Directory.CreateDirectory(LogDir);
 
-            // Trimmed protocol transcript: smtp-proto-YYYYMMDD.log
+            // Filtered protocol transcript: smtp-proto-YYYYMMDD.log
             var protoPath = Path.Combine(
                 LogDir,
                 $"smtp-proto-{DateTime.Now:yyyyMMdd}.log");
 
-            // Use our filtered logger on the outgoing client
+            // Attach our filtered logger to the outgoing client
             using var client = new SmtpClient(
                 new FilteredProtocolLogger(protoPath));
 
