@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
+using Serilog.Filters.Matching;
 
 namespace SmtpRelay
 {
@@ -18,7 +19,7 @@ namespace SmtpRelay
             var logDir = Path.Combine(baseDir, "logs");
             Directory.CreateDirectory(logDir);
 
-            // Load retention from config.json
+            // Load retention setting
             var cfg = Config.Load();
             var retention = cfg.RetentionDays;
 
@@ -36,16 +37,13 @@ namespace SmtpRelay
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: retention)
 
-                // 2) Dedicated SMTP log, filtering on SourceContext
-                .WriteTo.File(
-                    smtpLogPath,
-                    rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: retention,
-                    restrictedToMinimumLevel: LogEventLevel.Information,
-                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
-                    filter: logEvent =>
-                        logEvent.Properties.TryGetValue("SourceContext", out var sc) &&
-                        sc.ToString().Contains("SmtpServer"))
+                // 2) Dedicated SMTP-only log
+                .WriteTo.Logger(lc => lc
+                    .Filter.ByIncludingOnly(Matching.FromSource("SmtpServer"))
+                    .WriteTo.File(
+                        smtpLogPath,
+                        rollingInterval: RollingInterval.Day,
+                        retainedFileCountLimit: retention))
 
                 .CreateLogger();
 
