@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 
@@ -8,20 +7,22 @@ namespace SmtpRelay
 {
     internal static class Program
     {
-        public static void Main(string[] args)
-        {
-            // Prepare our log directory under Program Files
-            var baseDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "SMTP Relay", "service");
-            var logDir = Path.Combine(baseDir, "logs");
-            Directory.CreateDirectory(logDir);
+        // Base directory for config & logs
+        public static string BaseDir { get; } = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "SMTP Relay", "service");
 
-            // Configure Serilog as our host logger
+        static void Main(string[] args)
+        {
+            // Ensure folders exist
+            Directory.CreateDirectory(BaseDir);
+            Directory.CreateDirectory(Path.Combine(BaseDir, "logs"));
+
+            // Configure Serilog (app-only log, rotated daily)
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .WriteTo.File(
-                    Path.Combine(logDir, "app-.log"),
+                    Path.Combine(BaseDir, "logs", "app-.log"),
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 7)
                 .CreateLogger();
@@ -33,14 +34,7 @@ namespace SmtpRelay
                     .UseWindowsService()
                     .UseSerilog()
                     .ConfigureServices((_, services) =>
-                    {
-                        // singletons
-                        var cfg = Config.Load();
-                        services.AddSingleton(cfg);
-                        services.AddSingleton<MessageRelayStore>();
-                        // worker
-                        services.AddHostedService<Worker>();
-                    })
+                        services.AddHostedService<Worker>())
                     .Build()
                     .Run();
             }
