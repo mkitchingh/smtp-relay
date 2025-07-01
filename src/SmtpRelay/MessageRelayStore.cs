@@ -1,7 +1,6 @@
 using System;
 using System.Buffers;
 using System.IO;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using MailKit.Net.Smtp;
@@ -10,13 +9,14 @@ using MimeKit;
 using Serilog;
 using SmtpServer.Protocol;
 using SmtpServer.Storage;
+using SmtpResponse = SmtpServer.Protocol.SmtpResponse;
 
 namespace SmtpRelay
 {
     public class MessageRelayStore : IMessageStore
     {
-        private readonly Config  _cfg;
-        private readonly ILogger _log;
+        readonly Config  _cfg;
+        readonly ILogger _log;
 
         public MessageRelayStore(Config cfg, ILogger log)
         {
@@ -24,26 +24,27 @@ namespace SmtpRelay
             _log = log;
         }
 
-        public async Task<SmtpServer.Protocol.SmtpResponse> SaveAsync(
-            ISessionContext        context,
-            IMessageTransaction    transaction,
+        public async Task<SmtpResponse> SaveAsync(
+            ISessionContext context,
+            IMessageTransaction transaction,
             ReadOnlySequence<byte> buffer,
-            CancellationToken      cancellationToken)
+            CancellationToken cancellationToken)
         {
-            // Get the real remote endpoint:
-            var ep = context.RemoteEndPoint as IPEndPoint;
-            if (ep == null && context is dynamic dyn && dyn.NetworkClient != null)
-                ep = dyn.NetworkClient.RemoteEndPoint as IPEndPoint;
-            var remoteAddr = ep?.Address ?? IPAddress.Any;
-            _log.Information("Incoming relay request from {Address}", remoteAddr);
+            // check IP restrictions
+            var remote = context.RemoteEndPoint?.Address;
+            if (remote is null || !_cfg.IsAllowed(remote))
+            {
+                _log.Warning("DENIED {Remote} — not in allow-list", remote);
+                return SmtpResponse.MailboxUnavailable; // 550
+            }
 
             try
             {
-                // Load the incoming message bytes
-                var data = buffer.ToArray();
-                var message = MimeMessage.Load(new MemoryStream(data));
+                // parse the message
+                var bytes = buffer.ToArray();
+                var message = MimeMessage.Load(new MemoryStream(bytes));
 
-                // Connect & optionally STARTTLS
+                // send via smart host
                 using var client = new SmtpClient();
                 await client.ConnectAsync(
                     _cfg.SmartHost,
@@ -51,19 +52,23 @@ namespace SmtpRelay
                     _cfg.UseStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto,
                     cancellationToken);
 
-                // Authenticate if needed
-                if (!string.IsNullOrWhiteSpace(_cfg.Username))
-                    await client.AuthenticateAsync(_cfg.Username!, _cfg.Password!, cancellationToken);
+                if (!string.IsNullOrEmpty(_cfg.Username))
+                    await client.AuthenticateAsync(_cfg.Username, _cfg.Password!, cancellationToken);
 
                 await client.SendAsync(message, cancellationToken);
                 await client.DisconnectAsync(true, cancellationToken);
 
-                return SmtpServer.Protocol.SmtpResponse.Ok;
+                _log.Information("Relayed message from {Remote} — From:{From} To:{To}",
+                    remote,
+                    string.Join(",", message.From),
+                    string.Join(",", message.To));
+
+                return SmtpResponse.Ok;
             }
             catch (Exception ex)
             {
-                _log.Error(ex, "Relay failure from {Address}", remoteAddr);
-                return SmtpServer.Protocol.SmtpResponse.TransactionFailed;
+                _log.Error(ex, "Relay failure from {Remote}", context.RemoteEndPoint?.Address);
+                return SmtpResponse.TransactionFailed; // 554
             }
         }
     }
