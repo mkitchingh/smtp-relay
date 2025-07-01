@@ -1,17 +1,24 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
+    <!-- WinForms app -->
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <OutputType>WinExe</OutputType>
 
-    <!-- single icon file, live in installer folder -->
-    <ApplicationIcon>..\..\installer\smtp.ico</ApplicationIcon>
+    <!-- Publishing as single, self-contained EXE -->
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+    <!-- Match your service’s version stamp -->
+    <Version>1.4.0.0</Version>
+    <FileVersion>1.4.0.0</FileVersion>
+    <AssemblyVersion>1.4.0.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- no need to include the icon in this project -->
-    <ProjectReference Include="..\\SmtpRelay\\SmtpRelay.csproj" />
+    <!-- Ensure you have these refs -->
+    <PackageReference Include="Serilog" Version="2.12.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
   </ItemGroup>
-
 </Project>
