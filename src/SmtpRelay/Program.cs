@@ -1,11 +1,9 @@
-// src/SmtpRelay/Program.cs
 using System;
 using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using MailKit.Net.Smtp;                   // for ProtocolLogger
-using SmtpServer;                          // for SmtpServerOptionsBuilder
+using Serilog.Events;
 
 namespace SmtpRelay
 {
@@ -13,7 +11,7 @@ namespace SmtpRelay
     {
         static void Main(string[] args)
         {
-            // 1) Prepare directories
+            // Prepare folders
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(
                     Environment.SpecialFolder.ProgramFiles),
@@ -21,50 +19,45 @@ namespace SmtpRelay
             var logDir = Path.Combine(baseDir, "logs");
             Directory.CreateDirectory(logDir);
 
-            // 2) Load retention setting
-            var cfg       = Config.Load();
+            // Load retention setting
+            var cfg = Config.Load();
             var retention = cfg.RetentionDays;
 
-            // 3) Purge old protocol-log files
-            foreach (var file in Directory.GetFiles(logDir, "smtp-proto-*.log"))
-            {
-                if (File.GetCreationTime(file) < DateTime.Now.AddDays(-retention))
-                    File.Delete(file);
-            }
+            // Paths
+            var appLogPath  = Path.Combine(logDir, "app-.log");
+            var smtpLogPath = Path.Combine(logDir, "smtp-.log");
 
-            // 4) Configure Serilog for application events
-            var appLog = Path.Combine(logDir, "app-.log");
+            // Configure Serilog: app logs + SMTP‐only logs
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
+
+                // 1) General application log
                 .WriteTo.File(
-                    appLog,
+                    appLogPath,
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: retention)
+
+                // 2) Dedicated SMTP‐only log:
+                .WriteTo.Logger(lc => lc
+                    .Filter.ByIncludingOnly(evt =>
+                        evt.Properties.TryGetValue("SourceContext", out var sc) &&
+                        sc.ToString().Contains("SmtpServer"))
+                    .WriteTo.File(
+                        smtpLogPath,
+                        rollingInterval: RollingInterval.Day,
+                        retainedFileCountLimit: retention))
+
                 .CreateLogger();
 
             try
             {
                 Log.Information("Starting SMTP Relay Service");
-
-                // 5) Build SMTP server options with protocol logging
-                var protoLogFile = Path.Combine(
-                    logDir,
-                    $"smtp-proto-{DateTime.Now:yyyyMMdd}.log");
-
-                var options = new SmtpServerOptionsBuilder()
-                    .ServerName("SMTP Relay")
-                    .Port(cfg.UseStartTls ? cfg.SmartHostPort : 25, cfg.UseStartTls)
-                    .ProtocolLogger(_ => new ProtocolLogger(protoLogFile, append: true))
-                    .Build();
-
                 Host.CreateDefaultBuilder(args)
                     .UseWindowsService()
                     .UseSerilog()
                     .ConfigureServices((_, services) =>
                     {
-                        services
-                            .AddSingleton(options)
-                            .AddHostedService<Worker>();
+                        services.AddHostedService<Worker>();
                     })
                     .Build()
                     .Run();
