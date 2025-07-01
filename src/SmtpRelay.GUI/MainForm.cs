@@ -2,9 +2,10 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.ServiceProcess;
 using System.Windows.Forms;
-using SmtpRelay;  // your console/lib project
+using SmtpRelay;  // your core project
 
 namespace SmtpRelay.GUI
 {
@@ -30,7 +31,7 @@ namespace SmtpRelay.GUI
             txtPassword.Text         = cfg.Password;
             radioAllowAll.Checked    = cfg.AllowAllIPs;
             radioAllowList.Checked   = !cfg.AllowAllIPs;
-            txtIpList.Lines          = cfg.AllowedIPs;
+            txtIpList.Lines          = cfg.AllowedIPs.ToArray();      // LIST→ARRAY
             chkEnableLogging.Checked = cfg.EnableLogging;
             numRetentionDays.Value   = cfg.RetentionDays;
             ToggleAuthFields();
@@ -44,12 +45,12 @@ namespace SmtpRelay.GUI
             {
                 using var sc = new ServiceController(_serviceName);
                 var status = sc.Status;
-                labelServiceStatus.Text = status == ServiceControllerStatus.Running ? "Running" : "Stopped";
-                labelServiceStatus.ForeColor = status == ServiceControllerStatus.Running ? Color.Green : Color.Red;
+                labelServiceStatus.Text       = status == ServiceControllerStatus.Running ? "Running" : "Stopped";
+                labelServiceStatus.ForeColor  = status == ServiceControllerStatus.Running ? Color.Green : Color.Red;
             }
             catch
             {
-                labelServiceStatus.Text = "Unknown";
+                labelServiceStatus.Text      = "Unknown";
                 labelServiceStatus.ForeColor = Color.Orange;
             }
         }
@@ -106,7 +107,7 @@ namespace SmtpRelay.GUI
                 Username      = txtUsername.Text,
                 Password      = txtPassword.Text,
                 AllowAllIPs   = radioAllowAll.Checked,
-                AllowedIPs    = txtIpList.Lines,
+                AllowedIPs    = txtIpList.Lines.ToList(),  // ARRAY→LIST
                 EnableLogging = chkEnableLogging.Checked,
                 RetentionDays = (int)numRetentionDays.Value
             };
@@ -115,10 +116,8 @@ namespace SmtpRelay.GUI
             try
             {
                 using var sc = new ServiceController(_serviceName);
-                sc.Stop();
-                sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(10));
-                sc.Start();
-                sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(10));
+                sc.Stop();  sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(10));
+                sc.Start(); sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(10));
                 MessageBox.Show("Settings saved and service restarted.", "Success",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 UpdateServiceStatus();
