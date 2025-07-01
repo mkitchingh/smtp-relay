@@ -8,14 +8,16 @@ namespace SmtpRelay
 {
     internal static class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
+            // Prepare our log directory under Program Files
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "SMTP Relay", "service");
             var logDir = Path.Combine(baseDir, "logs");
             Directory.CreateDirectory(logDir);
 
+            // Configure Serilog as our host logger
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .WriteTo.File(
@@ -31,7 +33,14 @@ namespace SmtpRelay
                     .UseWindowsService()
                     .UseSerilog()
                     .ConfigureServices((_, services) =>
-                        services.AddHostedService<Worker>())
+                    {
+                        // singletons
+                        var cfg = Config.Load();
+                        services.AddSingleton(cfg);
+                        services.AddSingleton<MessageRelayStore>();
+                        // worker
+                        services.AddHostedService<Worker>();
+                    })
                     .Build()
                     .Run();
             }
