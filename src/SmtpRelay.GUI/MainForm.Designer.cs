@@ -81,7 +81,7 @@ namespace SmtpRelay.GUI
             this.FormBorderStyle         = FormBorderStyle.Sizable;
             this.StartPosition           = FormStartPosition.CenterScreen;
             this.Text                    = "SMTP Relay Configuration";
-            this.Font                    = new Font("Segoe UI",  nineF:9F, FontStyle.Regular, GraphicsUnit.Point);
+            this.Font                    = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
 
             // labelHost
             this.labelHost.AutoSize      = true;
@@ -209,15 +209,15 @@ namespace SmtpRelay.GUI
 
             // labelServiceStatusCaption
             this.labelServiceStatusCaption.AutoSize = true;
-            this.labelServiceStatusCaption.Font      = new Font("Segoe UI", nineF:9F, FontStyle.Bold);
+            this.labelServiceStatusCaption.Font      = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point);
             this.labelServiceStatusCaption.Location  = new Point(30, 520);
             this.labelServiceStatusCaption.Text      = "Service Status:";
 
             // labelServiceStatus
             this.labelServiceStatus.AutoSize   = true;
-            this.labelServiceStatus.Font      = new Font("Segoe UI", nineF:9F, FontStyle.Bold);
-            this.labelServiceStatus.Location  = new Point(150, 520);
-            this.labelServiceStatus.Text      = "Unknown";
+            this.labelServiceStatus.Font        = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point);
+            this.labelServiceStatus.Location    = new Point(150, 520);
+            this.labelServiceStatus.Text        = "Unknown";
 
             // lblVersion
             this.lblVersion.AutoSize          = true;
@@ -230,7 +230,7 @@ namespace SmtpRelay.GUI
             this.linkRepo.Text                = "https://github.com/mkitchingh/Smtp-Relay";
             this.linkRepo.LinkClicked        += linkRepo_LinkClicked;
 
-            // Add all controls
+            // Add controls
             this.Controls.AddRange(new Control[]
             {
                 this.labelHost, this.txtHost,
