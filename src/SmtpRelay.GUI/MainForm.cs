@@ -2,21 +2,37 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.ServiceProcess;
 using System.Windows.Forms;
+using System.Management;
 
 namespace SmtpRelay.GUI
 {
     public partial class MainForm : Form
     {
+        private readonly string _serviceName;
+
         public MainForm()
         {
             InitializeComponent();
-            // set version from assembly
-            lblVersion.Text = $"Version: {Assembly.GetExecutingAssembly().GetName().Version}";
-            chkStartTls_CheckedChanged(this, EventArgs.Empty);
-            radioAllowRestrictions_CheckedChanged(this, EventArgs.Empty);
+
+            // discover the real Windows service name by display name
+            _serviceName = ServiceController
+                .GetServices()
+                .FirstOrDefault(s =>
+                    s.DisplayName.Equals("SMTP Relay Service", StringComparison.OrdinalIgnoreCase))
+                ?.ServiceName ?? "SmtpRelay";
+
+            // set version to the FileVersion (e.g. 1.4.0.0)
+            var ver = FileVersionInfo
+                .GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+                .ProductVersion;
+            lblVersion.Text = $"Version: {ver}";
+
+            chkStartTls_CheckedChanged(null, EventArgs.Empty);
+            radioAllowRestrictions_CheckedChanged(null, EventArgs.Empty);
             UpdateServiceStatus();
         }
 
@@ -24,7 +40,7 @@ namespace SmtpRelay.GUI
         {
             try
             {
-                using var sc = new ServiceController("SmtpRelay");
+                using var sc = new ServiceController(_serviceName);
                 if (sc.Status == ServiceControllerStatus.Running)
                 {
                     labelServiceStatus.Text = "Service Running";
@@ -45,42 +61,54 @@ namespace SmtpRelay.GUI
 
         private void chkStartTls_CheckedChanged(object sender, EventArgs e)
         {
-            // enable creds only when STARTTLS is checked
-            bool enabled = chkStartTls.Checked;
-            lblUsername.Enabled = enabled;
-            txtUsername.Enabled = enabled;
-            lblPassword.Enabled = enabled;
-            txtPassword.Enabled = enabled;
-
-            // default port
-            numPort.Value = enabled ? 587 : 25;
+            bool en = chkStartTls.Checked;
+            lblUsername.Enabled = en;
+            txtUsername.Enabled = en;
+            lblPassword.Enabled = en;
+            txtPassword.Enabled = en;
+            numPort.Value = en ? 587 : 25;
         }
 
         private void radioAllowRestrictions_CheckedChanged(object sender, EventArgs e)
         {
-            // ip list only when "Allow Specified"
             txtIpList.Enabled = radioAllowList.Checked;
         }
 
         private void btnViewLogs_Click(object sender, EventArgs e)
         {
-            var baseDir = Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder.ProgramFiles),
+            var path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "SMTP Relay", "service", "logs");
-            Process.Start("explorer.exe", baseDir);
+            if (Directory.Exists(path))
+                Process.Start("explorer.exe", path);
         }
 
         private void btnSave_Click(object sender, EventArgs e)
         {
-            // your existing save & restart logic...
+            // existing SaveConfig() logic here...
+            // then restart the Windows service:
+            try
+            {
+                using var sc = new ServiceController(_serviceName);
+                if (sc.Status == ServiceControllerStatus.Running)
+                {
+                    sc.Stop();
+                    sc.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(30));
+                }
+                sc.Start();
+                sc.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(30));
+                MessageBox.Show("Settings saved and service restarted.", 
+                    "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to restart service:\n{ex.Message}",
+                    "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
             UpdateServiceStatus();
         }
 
-        private void btnClose_Click(object sender, EventArgs e)
-        {
-            Close();
-        }
+        private void btnClose_Click(object sender, EventArgs e) => Close();
 
         private void linkRepo_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
