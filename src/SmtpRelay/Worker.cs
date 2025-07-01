@@ -3,51 +3,32 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using SmtpServer;
-using SmtpServer.ComponentModel;
-using NetTools;
+using SmtpServer.Storage;
 
 namespace SmtpRelay
 {
     public class Worker : BackgroundService
     {
         private readonly Config _cfg;
-        private readonly ILogger _log;
 
-        public Worker()
-        {
-            _cfg = Config.Load();
-            _log = Log.Logger;
-        }
+        public Worker(Config cfg) => _cfg = cfg;
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _log.Information("Relay mode: {Mode}",
-                _cfg.AllowAllIPs
-                    ? "Allow ALL IPs"
-                    : $"Allow {_cfg.AllowedIPs.Count} range(s)");
+            Log.Information("Starting SMTP Relay Service");
 
-            // Build SMTP server options
-            var optionsBuilder = new SmtpServerOptionsBuilder()
+            var options = new SmtpServerOptionsBuilder()
                 .ServerName("SMTP Relay")
-                .Port(_cfg.SmartHostPort, _cfg.UseStartTls);
+                .Port(25, !_cfg.UseStartTls)          // incoming
+                .Port(25,  _cfg.UseStartTls)          // same port, different SecureSocketOptions
+                .Build();
 
-            if (!_cfg.AllowAllIPs)
-            {
-                var ep = optionsBuilder.Endpoint();
-                foreach (var r in _cfg.AllowedIPs)
-                {
-                    ep.Allow(r);
-                }
-            }
+            var services = new ServiceProviderBuilder()
+                .AddMessageStore(() =>
+                    new MessageRelayStore(_cfg, Log.Logger))
+                .Build();
 
-            // Wire up our store
-            var serviceProvider = new SmtpServerComponentBuilder()
-                .UseMessageStore<MessageRelayStore>()
-                .BuildServiceProvider();
-
-            var server = new SmtpServer.SmtpServer(
-                optionsBuilder.Build(),
-                serviceProvider);
+            var server = new SmtpServer.SmtpServer(options, services);
 
             await server.StartAsync(stoppingToken);
         }
