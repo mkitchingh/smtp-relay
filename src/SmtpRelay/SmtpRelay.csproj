@@ -4,17 +4,19 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
-    <!-- don’t treat warnings as errors so variant package versions don’t block you -->
+    <!-- don’t treat warnings-as-errors to avoid CI package‐downgrade holdups -->
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SmtpServer" Version="11.0.0" />
-    <PackageReference Include="MailKit" Version="4.1.0" />
-    <PackageReference Include="MimeKit" Version="4.4.0" />
-    <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
-    <PackageReference Include="Serilog" Version="2.12.0" />
+    <PackageReference Include="SmtpServer"               Version="11.0.0" />
+    <PackageReference Include="MailKit"                  Version="4.1.0" />
+    <PackageReference Include="MimeKit"                  Version="4.4.0" />
+    <PackageReference Include="IPAddressRange"           Version="3.0.0.1" />
+
+    <!-- Bumped from 2.12.0 up to 4.2.0 to satisfy Extensions.Hosting 9.0.0 -->
+    <PackageReference Include="Serilog"                  Version="4.2.0" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Serilog.Sinks.File"       Version="7.0.0" />
   </ItemGroup>
 </Project>
