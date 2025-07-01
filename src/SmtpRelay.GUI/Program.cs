@@ -1,35 +1,34 @@
-// File: src/SmtpRelay.GUI/Program.cs
-
 using System;
+using System.IO;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace SmtpRelay.GUI
 {
     internal static class Program
     {
+        /// <summary>
+        /// Exposes the GUI assembly version (matches Installed Apps).
+        /// </summary>
+        public static string AppVersion =>
+            Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "0.0.0";
+
+        /// <summary>
+        /// Returns the folder where the service writes logs.
+        /// </summary>
+        public static string GetServiceLogDirectory()
+        {
+            var baseDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "SMTP Relay", "service", "logs");
+            return baseDir;
+        }
+
         [STAThread]
         static void Main()
         {
-            try
-            {
-                // Classic WinForms init (works in net8.0 and earlier)
-                Application.EnableVisualStyles();
-                Application.SetCompatibleTextRenderingDefault(false);
-
-                // Run the main form
-                Application.Run(new MainForm());
-            }
-            catch (Exception ex)
-            {
-                // If something fails before the form appears, show it
-                MessageBox.Show(
-                    $"Failed to launch GUI:\n\n{ex}",
-                    "Startup Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-
-                Environment.Exit(1);
-            }
+            ApplicationConfiguration.Initialize();
+            Application.Run(new MainForm());
         }
     }
 }
