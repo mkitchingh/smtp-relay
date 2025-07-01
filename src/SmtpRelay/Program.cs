@@ -3,6 +3,7 @@ using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using Serilog.Events;
 
 namespace SmtpRelay
 {
@@ -10,21 +11,19 @@ namespace SmtpRelay
     {
         public static void Main(string[] args)
         {
-            // Prepare log folder
+            // ensure log directory
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "SMTP Relay", "service");
-            var logDir = Path.Combine(baseDir, "logs");
+                "SMTP Relay","service");
+            var logDir = Path.Combine(baseDir,"logs");
             Directory.CreateDirectory(logDir);
 
-            // Initialize Serilog: single rolling log
-            var cfg = Config.Load();
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .WriteTo.File(
-                    Path.Combine(logDir, "log-.txt"),
+                    Path.Combine(logDir,"app-.log"),
                     rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: cfg.RetentionDays)
+                    retainedFileCountLimit:  _loadRetention())
                 .CreateLogger();
 
             try
@@ -33,18 +32,33 @@ namespace SmtpRelay
                 Host.CreateDefaultBuilder(args)
                     .UseWindowsService()
                     .UseSerilog()
-                    .ConfigureServices(services =>
-                        services.AddHostedService<Worker>())
+                    .ConfigureServices((_,services) =>
+                    {
+                        var cfg = Config.Load();
+                        services.AddSingleton(cfg);
+                        services.AddSingleton<Serilog.ILogger>(Log.Logger);
+                        services.AddHostedService<Worker>();
+                    })
                     .Build()
                     .Run();
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "Service terminated unexpectedly");
+                Log.Fatal(ex,"Service terminated unexpectedly");
             }
             finally
             {
                 Log.CloseAndFlush();
+            }
+
+            static int _loadRetention()
+            {
+                try
+                {
+                    var cfg = Config.Load();
+                    return cfg.RetentionDays;
+                }
+                catch { return 7; }
             }
         }
     }
