@@ -1,35 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-    <PublishTrimmed>true</PublishTrimmed>
-    <!-- Prevent package downgrades -->
-    <NoWarn>NU1605</NoWarn>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Core SMTP server engine -->
     <PackageReference Include="SmtpServer" Version="11.0.0" />
-
-    <!-- MailKit/MimeKit for sending outgoing mail -->
+    <!-- Relay to smarthost -->
     <PackageReference Include="MailKit" Version="4.1.0" />
     <PackageReference Include="MimeKit" Version="4.4.0" />
-
-    <!-- IP/cidr parsing -->
-    <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
-
     <!-- Logging -->
+    <PackageReference Include="Serilog" Version="2.12.0" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-  </ItemGroup>
-
-  <!-- Exclude any old files you no longer use -->
-  <ItemGroup>
-    <Compile Remove="SmtpInboundServer.cs" />
+    <!-- Parse CIDRs -->
+    <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
   </ItemGroup>
 
 </Project>
