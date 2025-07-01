@@ -3,8 +3,7 @@ using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using Serilog.Filters;
-using Serilog.Filters.Expressions;
+using Serilog.Events;
 
 namespace SmtpRelay
 {
@@ -12,18 +11,18 @@ namespace SmtpRelay
     {
         static void Main(string[] args)
         {
-            // Ensure service folder exists
+            // Base/service directories
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "SMTP Relay", "service");
             var logDir = Path.Combine(baseDir, "logs");
             Directory.CreateDirectory(logDir);
 
-            // Load retention setting from shared config.json
+            // Read retention from config
             var cfg = Config.Load();
             var retention = cfg.RetentionDays;
 
-            // Serilog: app log + dedicated SMTP log with dynamic retention
+            // Serilog: app logs + SMTP-only logs
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 // General application log
@@ -31,9 +30,11 @@ namespace SmtpRelay
                     Path.Combine(logDir, "app-.log"),
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: retention)
-                // SMTP‐only log (entries from the SmtpServer library)
+                // Dedicated SMTP-only log using a lambda filter
                 .WriteTo.Logger(lc => lc
-                    .Filter.ByIncludingOnly(Matching.FromSource("SmtpServer"))
+                    .Filter.ByIncludingOnly(le =>
+                        le.Properties.TryGetValue("SourceContext", out var sc) &&
+                        sc.ToString().Contains("SmtpServer"))
                     .WriteTo.File(
                         Path.Combine(logDir, "smtp-.log"),
                         rollingInterval: RollingInterval.Day,
