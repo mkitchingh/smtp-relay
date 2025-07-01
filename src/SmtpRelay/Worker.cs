@@ -1,4 +1,3 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -19,20 +18,18 @@ namespace SmtpRelay
             _cfg = cfg;
             _log = log;
             _log.Information("Relay mode: {Mode}",
-                _cfg.AllowAllIPs
-                    ? "Allow ALL IPs"
-                    : $"Allow {_cfg.AllowedIPs.Count} range(s)");
+                cfg.AllowAllIPs ? "Allow ALL IPs" : $"Allow {cfg.AllowedIPs.Count} range(s)");
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var options = new SmtpServerOptionsBuilder()
                 .ServerName("SMTP Relay")
-                .Endpoint(e => e
-                    .Port(25)                    // listen port
-                    .AllowUnsecureAuthentication(_cfg.UseStartTls))
+                .Port(25)
+                .AllowUnsecureAuthentication(_cfg.UseStartTls)
                 .Build();
 
+            // set up DI for the message store
             var serviceProvider = new SmtpServer.ComponentModel.ServiceProvider();
             serviceProvider.Add(new MessageRelayStore(_cfg, _log));
 
