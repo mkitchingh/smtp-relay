@@ -1,12 +1,9 @@
 using System;
 using System.IO;
 using System.Buffers;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using MailKit;
 using MailKit.Net.Smtp;
-using MailKit.Security;
 using MimeKit;
 using Serilog;
 
@@ -14,12 +11,11 @@ namespace SmtpRelay
 {
     public static class MailSender
     {
-        private static readonly string BaseDir = Path.Combine(
+        static readonly string BaseDir = Path.Combine(
             Environment.GetFolderPath(
                 Environment.SpecialFolder.ProgramFiles),
             "SMTP Relay", "service");
-
-        private static readonly string LogDir = Path.Combine(BaseDir, "logs");
+        static readonly string LogDir = Path.Combine(BaseDir, "logs");
 
         public static async Task SendAsync(
             Config cfg,
@@ -29,27 +25,25 @@ namespace SmtpRelay
             // Ensure logs directory exists
             Directory.CreateDirectory(LogDir);
 
-            // Protocol transcript file: smtp-proto-YYYYMMDD.log
+            // Trimmed protocol transcript: smtp-proto-YYYYMMDD.log
             var protoPath = Path.Combine(
                 LogDir,
                 $"smtp-proto-{DateTime.Now:yyyyMMdd}.log");
 
-            // Attach ProtocolLogger (appending) to capture full SMTP conversation
+            // Use our filtered logger on the outgoing client
             using var client = new SmtpClient(
-                new ProtocolLogger(protoPath, append: true));
+                new FilteredProtocolLogger(protoPath));
 
             try
             {
                 Log.Information(
-                    "Connecting to smarthost {Host}:{Port} (STARTTLS={Tls})",
+                    "Connecting to {Host}:{Port} (STARTTLS={Tls})",
                     cfg.SmartHost, cfg.SmartHostPort, cfg.UseStartTls);
 
                 await client.ConnectAsync(
                         cfg.SmartHost,
                         cfg.SmartHostPort,
-                        cfg.UseStartTls
-                            ? SecureSocketOptions.StartTls
-                            : SecureSocketOptions.None,
+                        cfg.UseStartTls,
                         ct)
                     .ConfigureAwait(false);
 
@@ -63,10 +57,11 @@ namespace SmtpRelay
                         .ConfigureAwait(false);
                 }
 
-                // Load the incoming message
+                // Load the inbound message
                 using var ms = new MemoryStream(buffer.ToArray());
-                var message = await MimeMessage.LoadAsync(ms, ct)
-                                             .ConfigureAwait(false);
+                var message = await MimeMessage
+                    .LoadAsync(ms, ct)
+                    .ConfigureAwait(false);
 
                 Log.Information(
                     "Sending message from {From} to {To}",
