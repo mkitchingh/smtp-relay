@@ -1,36 +1,43 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using SmtpServer;
-using SmtpServer.Protocol;
 using SmtpServer.Storage;
-using SmtpServer.ComponentModel;
 
 namespace SmtpRelay
 {
     public class Worker : BackgroundService
     {
-        private readonly Config _cfg = Config.Load();
+        private readonly Config _cfg;
+        private readonly ILogger<Worker> _logger;
 
-        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        public Worker(Config cfg, ILogger<Worker> logger)
         {
-            Log.Information("Starting SMTP Relay Service");
+            _cfg    = cfg;
+            _logger = logger;
+        }
 
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            _logger.LogInformation("SMTP Relay Service starting…");
+
+            // build the SMTP server options
             var options = new SmtpServerOptionsBuilder()
                 .ServerName("SMTP Relay")
-                .MessageStore(new MessageRelayStore(_cfg))
-                .Endpoint(ep => ep
-                    .Port(_cfg.UseStartTls ? _cfg.SmartHostPort : 25)
-                    .AllowUnsecureAuthentication(!_cfg.UseStartTls))
+                // listen on port 25 unless STARTTLS==true then 587 (example)
+                .Port(_cfg.UseStartTls ? 587 : 25)
                 .Build();
 
-            var serviceProvider = new ServiceProviderBuilder()
-                .UseSessionContextFactory<DefaultSessionContextFactory>()
-                .BuildServiceProvider();
+            // wire up the custom message store
+            var smtpServer = new SmtpServerBuilder()
+                .Options(options)
+                .MessageStore(new MessageRelayStore(_cfg, Log.Logger))
+                .Build();
 
-            var server = new SmtpServer.SmtpServer(options, serviceProvider);
-            return server.StartAsync(stoppingToken);
+            // run until shutdown
+            await smtpServer.StartAsync(stoppingToken);
         }
     }
 }
