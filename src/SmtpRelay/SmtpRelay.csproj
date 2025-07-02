@@ -1,20 +1,30 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <!-- Target .NET 8 and produce a self-contained single file -->
     <TargetFramework>net8.0</TargetFramework>
-    <UseWindowsService>true</UseWindowsService>
-    <LangVersion>13.0</LangVersion>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
   </PropertyGroup>
+
   <ItemGroup>
+    <!-- Core SMTP server engine -->
     <PackageReference Include="SmtpServer" Version="11.0.0" />
+
+    <!-- Mail relay dependencies -->
     <PackageReference Include="MailKit" Version="4.1.0" />
     <PackageReference Include="MimeKit" Version="4.4.0" />
-    <PackageReference Include="Serilog" Version="2.12.0" />
+
+    <!-- IP/network parsing -->
+    <PackageReference Include="IPAddressRange" Version="1.6.1" />
+
+    <!-- Logging: bump Serilog to 4.2.0 to satisfy Hosting v9.0.0 -->
+    <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-    <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog.Filters.Expressions" Version="3.4.0" />
   </ItemGroup>
+
 </Project>
