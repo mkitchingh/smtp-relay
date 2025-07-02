@@ -4,61 +4,68 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
-using IPAddressRange; // from the IPAddressRange NuGet package
 
 namespace SmtpRelay
 {
     public class Config
     {
+        private const string FileName = "config.json";
+
         public string SmartHost { get; set; } = "";
         public int SmartHostPort { get; set; } = 25;
-        public bool UseStartTls { get; set; }
         public string? Username { get; set; }
         public string? Password { get; set; }
-
+        public bool UseStartTls { get; set; } = false;
         public bool AllowAllIPs { get; set; } = true;
-        public List<string>? AllowedIPs { get; set; } = new();
-
+        public List<string> AllowedIPs { get; set; } = new List<string>();
         public bool EnableLogging { get; set; } = true;
-        public int RetentionDays { get; set; } = 7;
-
-        static string ConfigFilePath =>
-            Path.Combine(AppContext.BaseDirectory, "config.json");
+        public int RetentionDays { get; set; } = 30;
 
         public static Config Load()
         {
-            if (!File.Exists(ConfigFilePath))
-                return new Config();
+            if (!File.Exists(FileName))
+                throw new FileNotFoundException($"Configuration file '{FileName}' not found");
 
-            var json = File.ReadAllText(ConfigFilePath);
+            var json = File.ReadAllText(FileName);
             return JsonSerializer.Deserialize<Config>(json)!
-                   ?? new Config();
+                ?? throw new InvalidOperationException("Failed to deserialize configuration");
         }
 
         public void Save()
         {
-            if (!AllowAllIPs && (AllowedIPs == null || !AllowedIPs.Any()))
-                throw new InvalidOperationException(
-                    "When AllowAllIPs is false, you must specify at least one AllowedIP.");
+            // validate
+            if (UseStartTls && SmartHostPort == 25)
+                SmartHostPort = 587;
+            if (!UseStartTls && SmartHostPort == 587)
+                SmartHostPort = 25;
 
-            var opts = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(this, opts);
-            File.WriteAllText(ConfigFilePath, json);
-        }
-
-        public IEnumerable<IPAddressRange> GetAllowedRanges()
-        {
-            if (AllowAllIPs)
+            if (!AllowAllIPs)
             {
-                yield return new IPAddressRange(
-                    IPAddress.Parse("0.0.0.0"),
-                    IPAddress.Parse("255.255.255.255"));
+                // ensure every entry is either an IP or CIDR
+                var parsed = AllowedIPs.Select(s =>
+                {
+                    var parts = s.Split('/');
+                    if (!IPAddress.TryParse(parts[0], out var ip))
+                        throw new FormatException($"Invalid IP address '{s}'");
+
+                    if (parts.Length == 1)
+                        return s; // single IP is OK
+
+                    if (!int.TryParse(parts[1], out var bits) || bits < 0 || bits > (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork ? 32 : 128))
+                        throw new FormatException($"Invalid CIDR suffix in '{s}'");
+
+                    return s; // e.g. "10.0.0.0/8"
+                }).ToList();
+
+                AllowedIPs = parsed;
             }
             else
             {
-                foreach (var text in AllowedIPs!)
-                    yield return IPAddressRange.Parse(text);
+                AllowedIPs.Clear();
             }
+
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            File.WriteAllText(FileName, JsonSerializer.Serialize(this, options));
         }
     }
 }
