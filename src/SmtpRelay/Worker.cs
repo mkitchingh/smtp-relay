@@ -4,33 +4,35 @@ using Microsoft.Extensions.Hosting;
 using Serilog;
 using SmtpServer;
 using SmtpServer.Storage;
+using IPAddressRange;
 
 namespace SmtpRelay
 {
     public class Worker : BackgroundService
     {
-        private readonly Config _cfg;
-
-        public Worker(Config cfg) => _cfg = cfg;
-
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            Log.Information("Starting SMTP Relay Service");
+            // Load config & log startup
+            var cfg = Config.Load();
+            Log.Information("Relay mode: {Mode}",
+                cfg.AllowAllIPs
+                  ? "Allow ALL IPs"
+                  : $"Allow {cfg.AllowedIPs.Count} range(s)");
 
+            // Build SMTP server options
             var options = new SmtpServerOptionsBuilder()
-                .ServerName("SMTP Relay")
-                .Port(25, !_cfg.UseStartTls)          // incoming
-                .Port(25,  _cfg.UseStartTls)          // same port, different SecureSocketOptions
-                .Build();
+                .ServerName("SMTPRelay")
+                .Port(25, enableSsl: false);
 
-            var services = new ServiceProviderBuilder()
-                .AddMessageStore(() =>
-                    new MessageRelayStore(_cfg, Log.Logger))
-                .Build();
+            if (!cfg.AllowAllIPs)
+            {
+                options = options.Restrictions(r =>
+                    r.AllowIp(cfg.AllowedIPs.ToArray()));
+            }
 
-            var server = new SmtpServer.SmtpServer(options, services);
-
-            await server.StartAsync(stoppingToken);
+            // Create & run
+            var server = new SmtpServer.SmtpServer(options.Build(), new MessageRelayStore(cfg));
+            return server.StartAsync(stoppingToken);
         }
     }
 }
