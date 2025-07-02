@@ -3,40 +3,34 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using SmtpServer;
+using SmtpServer.Protocol;
 using SmtpServer.Storage;
+using SmtpServer.ComponentModel;
 
 namespace SmtpRelay
 {
     public class Worker : BackgroundService
     {
-        private readonly Config _cfg;
-        private readonly ILogger _log;
-        private readonly MessageRelayStore _store;
+        private readonly Config _cfg = Config.Load();
 
-        public Worker()
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _cfg   = Config.Load();
-            _log   = Log.Logger;
-            _store = new MessageRelayStore(_cfg, _log);
-        }
+            Log.Information("Starting SMTP Relay Service");
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            _log.Information("Relay mode: {Mode}", 
-                _cfg.AllowAllIPs 
-                    ? "Allow ALL IPs" 
-                    : $"Allow {_cfg.AllowedIPs.Count} range(s)");
-
-            // configure and start the inbound SMTP server
             var options = new SmtpServerOptionsBuilder()
                 .ServerName("SMTP Relay")
-                // default listen on port 25
-                .Port(25)
-                .MessageStore(_store)
+                .MessageStore(new MessageRelayStore(_cfg))
+                .Endpoint(ep => ep
+                    .Port(_cfg.UseStartTls ? _cfg.SmartHostPort : 25)
+                    .AllowUnsecureAuthentication(!_cfg.UseStartTls))
                 .Build();
 
-            var server = new SmtpServer.SmtpServer(options);
-            await server.StartAsync(stoppingToken);
+            var serviceProvider = new ServiceProviderBuilder()
+                .UseSessionContextFactory<DefaultSessionContextFactory>()
+                .BuildServiceProvider();
+
+            var server = new SmtpServer.SmtpServer(options, serviceProvider);
+            return server.StartAsync(stoppingToken);
         }
     }
 }
