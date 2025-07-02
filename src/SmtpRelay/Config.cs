@@ -1,57 +1,57 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
+using System.Net;
 using System.Text.Json;
-using NetTools;
+using IPAddressRange;
 
 namespace SmtpRelay
 {
     public class Config
     {
-        private static readonly string ConfigPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "SMTP Relay",
-            "config.json");
-
-        public string SmartHost { get; set; } = "";
-        public int SmartHostPort { get; set; } = 25;
-        public string Username { get; set; } = "";
-        public string Password { get; set; } = "";
-        public bool UseStartTls { get; set; } = false;
-        public bool AllowAllIPs { get; set; } = true;
+        public string   SmartHost      { get; set; } = "";
+        public int      SmartHostPort  { get; set; }
+        public string?  Username       { get; set; }
+        public string?  Password       { get; set; }
+        public bool     UseStartTls    { get; set; }
+        public bool     AllowAllIPs    { get; set; }
         public List<string> AllowedIPs { get; set; } = new();
-        public bool EnableLogging { get; set; } = false;
-        public int RetentionDays { get; set; } = 7;
+        public bool     EnableLogging  { get; set; }
+        public int      RetentionDays  { get; set; }
+
+        const string ConfigPath = @"C:\Program Files\SMTP Relay\service\config.json";
 
         public static Config Load()
         {
-            if (!File.Exists(ConfigPath))
-                return new Config();
-
+            if (!File.Exists(ConfigPath)) throw new FileNotFoundException(ConfigPath);
             var json = File.ReadAllText(ConfigPath);
-            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            return JsonSerializer.Deserialize<Config>(json, opts) ?? new Config();
+            return JsonSerializer.Deserialize<Config>(json)
+                ?? throw new InvalidOperationException("Failed to parse config.json");
         }
 
         public void Save()
         {
-            // ensure directory exists
-            Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath)!);
-
-            // validate each entry if not allowing all
             if (!AllowAllIPs)
             {
-                foreach (var entry in AllowedIPs.Where(e => !string.IsNullOrWhiteSpace(e)))
+                // validate each IP or CIDR
+                foreach (var entry in AllowedIPs)
                 {
-                    // throws if invalid CIDR or IP
-                    _ = IPAddressRange.Parse(entry.Trim());
+                    _ = new IPAddressRange(entry); // throws on invalid
                 }
             }
-
             var opts = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(this, opts);
-            File.WriteAllText(ConfigPath, json);
+            File.WriteAllText(ConfigPath, JsonSerializer.Serialize(this, opts));
+        }
+
+        public bool IsAllowed(IPAddress address)
+        {
+            if (AllowAllIPs) return true;
+            foreach (var entry in AllowedIPs)
+            {
+                var range = new IPAddressRange(entry);
+                if (range.Contains(address)) return true;
+            }
+            return false;
         }
     }
 }
