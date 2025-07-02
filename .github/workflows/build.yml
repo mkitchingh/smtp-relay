@@ -1,0 +1,52 @@
+name: Build & Package SMTP Relay
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build solution
+        run: dotnet build SMTPRelay.sln -c Release --no-restore
+
+      # ---- Service (self-contained single file, no trim) ------------
+      - name: Publish Service
+        run: >
+          dotnet publish src/SmtpRelay/SmtpRelay.csproj
+          -c Release
+          -r win-x64
+          -p:SelfContained=true
+          -p:PublishSingleFile=true
+          -o installer/output/service
+
+      # ---- GUI (already self-contained) -----------------------------
+      - name: Publish GUI
+        run: >
+          dotnet publish src/SmtpRelay.GUI/SmtpRelay.GUI.csproj
+          -c Release
+          -r win-x64
+          -p:SelfContained=true
+          -p:PublishSingleFile=true
+          -o installer/output/gui
+
+      # ---- Compile Inno Setup --------------------------------------
+      - name: Compile installer
+        run: '& "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" installer\\SmtpRelayInstaller.iss'
+
+      # ---- Upload installer EXE ------------------------------------
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: SMTP-Relay-Installer
+          path: installer/Output/*.exe
