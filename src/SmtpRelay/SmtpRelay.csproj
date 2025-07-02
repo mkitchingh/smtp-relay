@@ -8,14 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Core SMTP engine -->
+    <!-- Core SMTP server engine -->
     <PackageReference Include="SmtpServer" Version="11.0.0" />
-    <!-- Relay out with MailKit/MimeKit -->
+    <!-- For outbound relay -->
     <PackageReference Include="MailKit" Version="4.1.0" />
     <PackageReference Include="MimeKit" Version="4.4.0" />
-    <!-- IP/subnet parsing -->
-    <PackageReference Include="IPAddressRange" Version="1.6.1" />
-    <!-- Structured logging -->
+    <!-- CIDR parsing (netstandard2.1 compatible) -->
+    <PackageReference Include="IPAddressRange" Version="3.0.0.1" />
+    <!-- Structured file-based logging -->
     <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
