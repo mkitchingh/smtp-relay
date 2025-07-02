@@ -1,57 +1,64 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text.Json;
-using IPAddressRange;
+using IPAddressRange; // from the IPAddressRange NuGet package
 
 namespace SmtpRelay
 {
     public class Config
     {
-        public string   SmartHost      { get; set; } = "";
-        public int      SmartHostPort  { get; set; }
-        public string?  Username       { get; set; }
-        public string?  Password       { get; set; }
-        public bool     UseStartTls    { get; set; }
-        public bool     AllowAllIPs    { get; set; }
-        public List<string> AllowedIPs { get; set; } = new();
-        public bool     EnableLogging  { get; set; }
-        public int      RetentionDays  { get; set; }
+        public string SmartHost { get; set; } = "";
+        public int SmartHostPort { get; set; } = 25;
+        public bool UseStartTls { get; set; }
+        public string? Username { get; set; }
+        public string? Password { get; set; }
 
-        const string ConfigPath = @"C:\Program Files\SMTP Relay\service\config.json";
+        public bool AllowAllIPs { get; set; } = true;
+        public List<string>? AllowedIPs { get; set; } = new();
+
+        public bool EnableLogging { get; set; } = true;
+        public int RetentionDays { get; set; } = 7;
+
+        static string ConfigFilePath =>
+            Path.Combine(AppContext.BaseDirectory, "config.json");
 
         public static Config Load()
         {
-            if (!File.Exists(ConfigPath)) throw new FileNotFoundException(ConfigPath);
-            var json = File.ReadAllText(ConfigPath);
-            return JsonSerializer.Deserialize<Config>(json)
-                ?? throw new InvalidOperationException("Failed to parse config.json");
+            if (!File.Exists(ConfigFilePath))
+                return new Config();
+
+            var json = File.ReadAllText(ConfigFilePath);
+            return JsonSerializer.Deserialize<Config>(json)!
+                   ?? new Config();
         }
 
         public void Save()
         {
-            if (!AllowAllIPs)
-            {
-                // validate each IP or CIDR
-                foreach (var entry in AllowedIPs)
-                {
-                    _ = new IPAddressRange(entry); // throws on invalid
-                }
-            }
+            if (!AllowAllIPs && (AllowedIPs == null || !AllowedIPs.Any()))
+                throw new InvalidOperationException(
+                    "When AllowAllIPs is false, you must specify at least one AllowedIP.");
+
             var opts = new JsonSerializerOptions { WriteIndented = true };
-            File.WriteAllText(ConfigPath, JsonSerializer.Serialize(this, opts));
+            var json = JsonSerializer.Serialize(this, opts);
+            File.WriteAllText(ConfigFilePath, json);
         }
 
-        public bool IsAllowed(IPAddress address)
+        public IEnumerable<IPAddressRange> GetAllowedRanges()
         {
-            if (AllowAllIPs) return true;
-            foreach (var entry in AllowedIPs)
+            if (AllowAllIPs)
             {
-                var range = new IPAddressRange(entry);
-                if (range.Contains(address)) return true;
+                yield return new IPAddressRange(
+                    IPAddress.Parse("0.0.0.0"),
+                    IPAddress.Parse("255.255.255.255"));
             }
-            return false;
+            else
+            {
+                foreach (var text in AllowedIPs!)
+                    yield return IPAddressRange.Parse(text);
+            }
         }
     }
 }
