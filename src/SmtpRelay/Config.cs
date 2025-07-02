@@ -37,7 +37,7 @@ namespace SmtpRelay
         }
 
         /// <summary>
-        /// rawAllowList: comma-separated list of CIDRs/IPs, e.g. "10.0.0.0/8,127.0.0.1"
+        /// rawAllowList: comma-separated CIDRs or single IPs, e.g. "10.0.0.0/8,127.0.0.1"
         /// </summary>
         public void Save(string rawAllowList)
         {
@@ -46,11 +46,10 @@ namespace SmtpRelay
             if (!AllowAllIPs)
             {
                 AllowedIPs = new List<IPAddressRange>();
-                var entries = rawAllowList
-                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                foreach (var e in entries)
+                foreach (var entry in rawAllowList
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
-                    AllowedIPs.Add(IPAddressRange.Parse(e));
+                    AllowedIPs.Add(IPAddressRange.Parse(entry));
                 }
             }
 
