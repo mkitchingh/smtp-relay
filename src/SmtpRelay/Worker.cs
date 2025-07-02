@@ -12,26 +12,23 @@ namespace SmtpRelay
     {
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // Load config & log startup
             var cfg = Config.Load();
             Log.Information("Relay mode: {Mode}",
                 cfg.AllowAllIPs
                   ? "Allow ALL IPs"
                   : $"Allow {cfg.AllowedIPs.Count} range(s)");
 
-            // Build SMTP server options
-            var options = new SmtpServerOptionsBuilder()
+            var builder = new SmtpServerOptionsBuilder()
                 .ServerName("SMTPRelay")
                 .Port(25, enableSsl: false);
 
             if (!cfg.AllowAllIPs)
             {
-                options = options.Restrictions(r =>
+                builder = builder.Restrictions(r => 
                     r.AllowIp(cfg.AllowedIPs.ToArray()));
             }
 
-            // Create & run
-            var server = new SmtpServer.SmtpServer(options.Build(), new MessageRelayStore(cfg));
+            var server = new SmtpServer.SmtpServer(builder.Build(), new MessageRelayStore(cfg));
             return server.StartAsync(stoppingToken);
         }
     }
