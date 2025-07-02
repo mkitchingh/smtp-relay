@@ -1,43 +1,44 @@
 using System;
-using System.Buffers;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Net;
+using System.IO;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
-using NetTools;
 using Serilog;
 using SmtpServer.Protocol;
 using SmtpServer.Storage;
 
 namespace SmtpRelay
 {
-    public class MessageRelayStore : IMessageStore
+    public class MessageRelayStore : MessageStore
     {
-        private readonly Config _cfg;
-        private readonly ILogger _log;
+        readonly Config _cfg;
 
-        public MessageRelayStore(Config cfg, ILogger log)
-        {
-            _cfg = cfg;
-            _log = log;
-        }
+        public MessageRelayStore(Config cfg) => _cfg = cfg;
 
-        public async Task<SmtpServer.Protocol.SmtpResponse> SaveAsync(
-            ISessionContext context,
+        public override async Task<SmtpResponse> SaveAsync(
+            ISessionContext     context,
             IMessageTransaction transaction,
-            ReadOnlySequence<byte> buffer,
-            CancellationToken cancellationToken)
+            CancellationToken   cancellationToken)
         {
+            // figure out remote IP
+            var remote = context.RemoteEndPoint?.Address ?? IPAddress.None;
+            Log.Information("Incoming relay request from {Remote}", remote);
+
+            if (!_cfg.IsAllowed(remote))
+            {
+                Log.Warning("DENIED {Remote} — not in allow-list", remote);
+                return new SmtpResponse(SmtpReplyCode.RelayDenied, "Relaying Denied");
+            }
+
             try
             {
-                // parse incoming message bytes
-                var data = buffer.ToArray();
-                var message = MimeMessage.Load(new MemoryStream(data));
+                // parse the message from the transaction stream
+                var message = MimeMessage.Load(transaction.Message.Content);
 
-                // perform outbound relay via MailKit
-                using var client = new MailKit.Net.Smtp.SmtpClient();
+                using var client = new SmtpClient();
                 await client.ConnectAsync(
                     _cfg.SmartHost,
                     _cfg.SmartHostPort,
@@ -46,18 +47,23 @@ namespace SmtpRelay
                         : SecureSocketOptions.Auto,
                     cancellationToken);
 
-                if (!string.IsNullOrEmpty(_cfg.Username))
-                    await client.AuthenticateAsync(_cfg.Username, _cfg.Password, cancellationToken);
+                if (!string.IsNullOrWhiteSpace(_cfg.Username))
+                {
+                    await client.AuthenticateAsync(
+                        _cfg.Username,
+                        _cfg.Password!,
+                        cancellationToken);
+                }
 
                 await client.SendAsync(message, cancellationToken);
                 await client.DisconnectAsync(true, cancellationToken);
 
-                return SmtpServer.Protocol.SmtpResponse.Ok;
+                return SmtpResponse.Ok;
             }
             catch (Exception ex)
             {
-                _log.Error(ex, "Relay failure from {Remote}", context.RemoteEndPoint);
-                return SmtpServer.Protocol.SmtpResponse.TransactionFailed;
+                Log.Error(ex, "Relay failure from {Remote}", remote);
+                return SmtpResponse.TransactionFailed;
             }
         }
     }
