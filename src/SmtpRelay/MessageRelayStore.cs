@@ -21,7 +21,7 @@ namespace SmtpRelay
             _cfg = cfg;
         }
 
-        public async Task<SmtpResponse> SaveAsync(
+        public async Task<SmtpServer.Protocol.SmtpResponse> SaveAsync(
             ISessionContext      context,
             IMessageTransaction  transaction,
             ReadOnlySequence<byte> buffer,
@@ -29,11 +29,11 @@ namespace SmtpRelay
         {
             try
             {
-                // Load incoming message
+                // parse incoming data
                 var data = buffer.ToArray();
                 var message = MimeMessage.Load(new MemoryStream(data));
 
-                // Relay via MailKit
+                // relay via MailKit
                 using var client = new SmtpClient();
                 await client.ConnectAsync(
                     _cfg.SmartHost,
@@ -47,12 +47,12 @@ namespace SmtpRelay
                 await client.SendAsync(message, cancellationToken);
                 await client.DisconnectAsync(true, cancellationToken);
 
-                return SmtpResponse.Ok;
+                return SmtpServer.Protocol.SmtpResponse.Ok;
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Relay failure from {Remote}", context.RemoteEndPoint);
-                return SmtpResponse.TransactionFailed;
+                return SmtpServer.Protocol.SmtpResponse.TransactionFailed;
             }
         }
     }
