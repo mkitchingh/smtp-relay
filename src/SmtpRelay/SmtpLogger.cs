@@ -1,36 +1,57 @@
 using System;
 using System.IO;
+using MailKit.ProtocolLogger;
 using Serilog;
+using Serilog.Events;
+// Alias Serilog’s ILogger so there’s no clash with Microsoft.Extensions.Logging.ILogger
+using SerilogLogger = Serilog.ILogger;
 
 namespace SmtpRelay
 {
     public static class SmtpLogger
     {
-        public static readonly ILogger Logger;
-
-        static SmtpLogger()
+        /// <summary>
+        /// Creates (or re-uses) the MailKit ProtocolLogger writing to
+        /// service/logs/smtp-proto-YYYYMMDD.log and returns it.
+        /// </summary>
+        public static ProtocolLogger CreateProtocolLogger()
         {
-            // Mirror the retention setting
-            var cfg = Config.Load();
-            var retention = cfg.RetentionDays;
-
-            // Ensure logs folder exists
+            // Determine the folder
             var logDir = Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "SMTP Relay", "service", "logs");
             Directory.CreateDirectory(logDir);
 
-            // SMTP log path
-            var smtpLogPath = Path.Combine(logDir, "smtp-.log");
+            // Filename: smtp-proto-20250702.log for example
+            var file = Path.Combine(
+                logDir,
+                $"smtp-proto-{DateTime.Now:yyyyMMdd}.log");
 
-            // Configure Serilog for SMTP traffic only
-            Logger = new LoggerConfiguration()
+            // Append to existing file each day
+            return new ProtocolLogger(file, append: true);
+        }
+
+        /// <summary>
+        /// Configures Serilog to also write SMTP-only entries (MailKit’s ProtocolLogger write events)
+        /// into the same logs folder, rolling daily.
+        /// </summary>
+        public static void ConfigureSerilog(SerilogLogger log)
+        {
+            // (Assumes your Program.cs has already created the "logs" folder)
+            // This adds a sub‐logger for anything tagged with "MailKit.ProtocolLogger"
+            Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
-                .WriteTo.File(
-                    smtpLogPath,
-                    rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: retention)
+                .WriteTo.Logger(lc => lc
+                    .Filter.ByIncludingOnly(evt =>
+                        evt.Properties.ContainsKey("SourceContext") &&
+                        evt.Properties["SourceContext"].ToString().Contains("MailKit.ProtocolLogger"))
+                    .WriteTo.File(
+                        Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                            "SMTP Relay", "service", "logs",
+                            "smtp-proto-.log"),
+                        rollingInterval: RollingInterval.Day,
+                        retainedFileCountLimit: 7))
                 .CreateLogger();
         }
     }
