@@ -3,76 +3,73 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using IPAddressRange;
+using NetTools;  // <-- IPAddressRange lives here
 
 namespace SmtpRelay
 {
     public class Config
     {
-        public string SmartHost { get; set; } = "";
-        public int SmartHostPort { get; set; } = 25;
-        public string? Username { get; set; }
-        public string? Password { get; set; }
-        public bool UseStartTls { get; set; } = false;
+        // General SMTP settings
+        public string   SmartHost       { get; set; } = "";
+        public int      SmartHostPort   { get; set; } = 25;
+        public string?  Username        { get; set; }
+        public string?  Password        { get; set; }
+        public bool     UseStartTls     { get; set; } = false;
 
-        /// <summary>
-        /// If true, all IPs are allowed; otherwise only those in AllowedIPs.
-        /// </summary>
-        public bool AllowAllIPs { get; set; } = true;
+        // Relay restrictions
+        public bool     AllowAllIPs     { get; set; } = true;
+        public string   AllowedIPsText  { get; set; } = ""; // comma-separated list as entered in GUI
+        public List<IPAddressRange> AllowedIPs { get; set; } = new();
 
-        /// <summary>
-        /// Comma-separated list of IPs or CIDRs (e.g. "10.0.0.0/8,192.168.0.0/16").
-        /// </summary>
-        public string AllowedIPs { get; set; } = "";
+        // Logging & retention
+        public bool     EnableLogging   { get; set; } = true;
+        public int      RetentionDays   { get; set; } = 30;
 
-        public bool EnableLogging { get; set; } = true;
-        public int RetentionDays { get; set; } = 30;
-
-        // config.json lives next to the service EXE
+        // Where the file lives on disk
         private static string ConfigFilePath =>
-            Path.Combine(AppContext.BaseDirectory, "config.json");
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "SMTP Relay", "service", "config.json");
 
         public static Config Load()
         {
             if (!File.Exists(ConfigFilePath))
-                return new Config();
+            {
+                var cfg = new Config();
+                cfg.Save();
+                return cfg;
+            }
 
             var json = File.ReadAllText(ConfigFilePath);
-            var cfg = JsonSerializer.Deserialize<Config>(json);
-            return cfg ?? new Config();
+            return JsonSerializer.Deserialize<Config>(json)!
+                   ?? throw new InvalidOperationException("Failed to deserialize config");
         }
 
         public void Save()
         {
-            // Validate and normalize the allowed-IPs list
-            if (!AllowAllIPs)
-            {
-                // Split on commas, remove empty entries, trim whitespace
-                var entries = AllowedIPs
-                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(s => s.Trim())
-                    .ToList();
+            // Ensure folder exists
+            var dir = Path.GetDirectoryName(ConfigFilePath)!;
+            Directory.CreateDirectory(dir);
 
-                // Validate each one by attempting to parse
+            // Rebuild the AllowedIPs list from the comma-separated text
+            AllowedIPs.Clear();
+            if (!AllowAllIPs && !string.IsNullOrWhiteSpace(AllowedIPsText))
+            {
+                var entries = AllowedIPsText
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim());
+
                 foreach (var entry in entries)
                 {
-                    // throws FormatException if bad
-                    _ = IPAddressRange.Parse(entry);
+                    // This will throw FormatException if entry is invalid
+                    var range = IPAddressRange.Parse(entry);
+                    AllowedIPs.Add(range);
                 }
-
-                // Store back as a clean, comma+space joined string
-                AllowedIPs = string.Join(", ", entries);
-            }
-            else
-            {
-                // Clear out anything that was there
-                AllowedIPs = "";
             }
 
-            // Write out the JSON
+            // Write out the full Config object (including the text and the parsed ranges)
             var options = new JsonSerializerOptions { WriteIndented = true };
             var json = JsonSerializer.Serialize(this, options);
-
             File.WriteAllText(ConfigFilePath, json);
         }
     }
