@@ -10,32 +10,32 @@ namespace SmtpRelay
     {
         static void Main(string[] args)
         {
-            // Shared log folder under Program Files\SMTP Relay\service\logs
+            // Build up the shared folder paths
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "SMTP Relay", "service");
             var logDir = Path.Combine(baseDir, "logs");
             Directory.CreateDirectory(logDir);
 
-            // Only the app‐level log sink here (app-*.log).
-            // Your protocol‐level logger (smtp-proto-*.log) lives in Worker.cs,
-            // so we remove the old smtp-*.log sink entirely.
+            // Serilog: only the general application log, rolling daily
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .WriteTo.File(
                     Path.Combine(logDir, "app-.log"),
                     rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: 30)
+                    retainedFileCountLimit: 7)
                 .CreateLogger();
 
             try
             {
                 Log.Information("Starting SMTP Relay Service");
+
                 Host.CreateDefaultBuilder(args)
                     .UseWindowsService()
-                    .UseSerilog()
+                    .UseSerilog()                // let Serilog drive all Microsoft logs
                     .ConfigureServices((_, services) =>
-                        services.AddHostedService<Worker>())
+                        services.AddSingleton(Log.Logger)
+                                .AddHostedService<Worker>())
                     .Build()
                     .Run();
             }
