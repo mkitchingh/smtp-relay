@@ -1,6 +1,6 @@
 using System;
-using System.Buffers;
 using System.IO;
+using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
 using MailKit.Net.Smtp;
@@ -10,57 +10,78 @@ using Serilog;
 
 namespace SmtpRelay
 {
-    public class MailSender
+    public static class MailSender
     {
-        private readonly Config _cfg;
-        private readonly ILogger _log;
+        private static readonly string BaseDir = Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder.ProgramFiles),
+            "SMTP Relay", "service");
 
-        public MailSender(Config cfg, ILogger log)
-        {
-            _cfg = cfg;
-            _log = log;
-        }
+        private static readonly string LogDir = Path.Combine(BaseDir, "logs");
 
-        /// <summary>
-        /// Relay the raw SMTP message to the smart host.
-        /// </summary>
-        public async Task SendAsync(Config cfg, ReadOnlySequence<byte> buffer, CancellationToken ct)
+        public static async Task SendAsync(
+            Config cfg,
+            ReadOnlySequence<byte> buffer,
+            CancellationToken ct)
         {
+            // Ensure logs directory exists
+            Directory.CreateDirectory(LogDir);
+
+            // Protocol transcript file: smtp-proto-YYYYMMDD.log
+            var protoPath = Path.Combine(
+                LogDir,
+                $"smtp-proto-{DateTime.Now:yyyyMMdd}.log");
+
+            // Attach our filtered logger to the outgoing client
+            using var client = new SmtpClient(
+                new FilteredProtocolLogger(protoPath));
+
             try
             {
-                // deserialize incoming message
-                var data = buffer.ToArray();
-                var message = MimeMessage.Load(new MemoryStream(data));
-
-                // only one client, no extra smtp-*.log file
-                using var client = new SmtpClient();
-
-                _log.Information(
+                Log.Information(
                     "Connecting to {Host}:{Port} (STARTTLS={Tls})",
                     cfg.SmartHost, cfg.SmartHostPort, cfg.UseStartTls);
 
+                var socketOpts = cfg.UseStartTls
+                    ? SecureSocketOptions.StartTls
+                    : SecureSocketOptions.None;
+
                 await client.ConnectAsync(
-                    cfg.SmartHost,
-                    cfg.SmartHostPort,
-                    cfg.UseStartTls
-                        ? SecureSocketOptions.StartTls
-                        : SecureSocketOptions.Auto,
-                    ct);
+                        cfg.SmartHost,
+                        cfg.SmartHostPort,
+                        socketOpts,
+                        ct)
+                    .ConfigureAwait(false);
 
-                if (!string.IsNullOrEmpty(cfg.Username))
+                if (!string.IsNullOrWhiteSpace(cfg.Username))
+                {
+                    Log.Information("Authenticating as {User}", cfg.Username);
                     await client.AuthenticateAsync(
-                        cfg.Username!,
-                        cfg.Password!,
-                        ct);
+                            cfg.Username, cfg.Password, ct)
+                        .ConfigureAwait(false);
+                }
 
-                await client.SendAsync(message, ct);
-                await client.DisconnectAsync(true, ct);
+                // Load the inbound message
+                using var ms = new MemoryStream(buffer.ToArray());
+                var message = await MimeMessage
+                    .LoadAsync(ms, ct)
+                    .ConfigureAwait(false);
 
-                _log.Information("Message relayed successfully");
+                Log.Information(
+                    "Sending message from {From} to {To}",
+                    message.From, message.To);
+
+                await client.SendAsync(message, ct)
+                            .ConfigureAwait(false);
+
+                await client.DisconnectAsync(true, ct)
+                            .ConfigureAwait(false);
+
+                Log.Information("Smarthost relay complete");
             }
             catch (Exception ex)
             {
-                _log.Error(ex, "Relay failure from smart host");
+                Log.Error(ex, "Error relaying message to smarthost");
                 throw;
             }
         }
