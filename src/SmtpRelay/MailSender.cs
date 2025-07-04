@@ -14,48 +14,53 @@ namespace SmtpRelay
     {
         private readonly Config _cfg;
         private readonly ILogger _log;
-        private readonly string _logDirectory;
 
         public MailSender(Config cfg, ILogger log)
         {
             _cfg = cfg;
             _log = log;
-            // where the service writes its logs (same as Program.cs)
-            var baseDir = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            _logDirectory = Path.Combine(baseDir, "SMTP Relay", "service", "logs");
         }
 
-        public async Task SendAsync(ReadOnlySequence<byte> buffer, CancellationToken ct)
+        /// <summary>
+        /// Relay the raw SMTP message to the smart host.
+        /// </summary>
+        public async Task SendAsync(Config cfg, ReadOnlySequence<byte> buffer, CancellationToken ct)
         {
             try
             {
-                // parse incoming message
+                // deserialize incoming message
                 var data = buffer.ToArray();
                 var message = MimeMessage.Load(new MemoryStream(data));
 
-                // relay to smart host
+                // only one client, no extra smtp-*.log file
                 using var client = new SmtpClient();
 
-                // connect (STARTTLS or plaintext depending on config)
+                _log.Information(
+                    "Connecting to {Host}:{Port} (STARTTLS={Tls})",
+                    cfg.SmartHost, cfg.SmartHostPort, cfg.UseStartTls);
+
                 await client.ConnectAsync(
-                    _cfg.SmartHost,
-                    _cfg.SmartHostPort,
-                    _cfg.UseStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto,
+                    cfg.SmartHost,
+                    cfg.SmartHostPort,
+                    cfg.UseStartTls
+                        ? SecureSocketOptions.StartTls
+                        : SecureSocketOptions.Auto,
                     ct);
 
-                if (!string.IsNullOrEmpty(_cfg.Username))
-                    await client.AuthenticateAsync(_cfg.Username, _cfg.Password, ct);
+                if (!string.IsNullOrEmpty(cfg.Username))
+                    await client.AuthenticateAsync(
+                        cfg.Username!,
+                        cfg.Password!,
+                        ct);
 
                 await client.SendAsync(message, ct);
                 await client.DisconnectAsync(true, ct);
 
-                _log.Information("Relayed message from {Remote} to {Host}:{Port}",
-                    message.From, _cfg.SmartHost, _cfg.SmartHostPort);
+                _log.Information("Message relayed successfully");
             }
             catch (Exception ex)
             {
-                _log.Error(ex, "Relay failure from {Remote}", 
-                    System.Net.IPAddress.None); // you can swap in context.Remote
+                _log.Error(ex, "Relay failure from smart host");
                 throw;
             }
         }
