@@ -1,5 +1,3 @@
-// src/SmtpRelay/Program.cs
-
 using System;
 using System.IO;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,17 +10,18 @@ namespace SmtpRelay
     {
         static void Main(string[] args)
         {
-            // where we keep logs under Program Files\SMTP Relay\service\logs
+            // Shared log folder under Program Files\SMTP Relay\service\logs
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "SMTP Relay", "service");
             var logDir = Path.Combine(baseDir, "logs");
             Directory.CreateDirectory(logDir);
 
-            // Serilog: only the application log here
+            // Only the app‐level log sink here (app-*.log).
+            // Your protocol‐level logger (smtp-proto-*.log) lives in Worker.cs,
+            // so we remove the old smtp-*.log sink entirely.
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
-                // General application log (app-*.log)
                 .WriteTo.File(
                     Path.Combine(logDir, "app-.log"),
                     rollingInterval: RollingInterval.Day,
