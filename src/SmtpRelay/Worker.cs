@@ -1,10 +1,14 @@
 using System;
-using System.IO;
+using System.Buffers;
+using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
-using Serilog;
+using Microsoft.Extensions.Logging;
+using NetTools;
 using SmtpServer;
+using SmtpServer.ComponentModel;
 using SmtpServer.Protocol;
 using SmtpServer.Storage;
 
@@ -12,46 +16,111 @@ namespace SmtpRelay
 {
     public class Worker : BackgroundService
     {
-        readonly ILogger       _log;
-        readonly Config        _cfg;
+        readonly ILogger<Worker>   _log;
+        readonly Config            _cfg;
+        readonly IPAddressRange[]  _ranges;
 
-        public Worker(ILogger log)
+        public Worker(ILogger<Worker> log)
         {
-            _log = log;
-            _cfg = Config.Load();
+            _log   = log;
+            _cfg   = Config.Load();
+            _ranges = _cfg.AllowAllIPs
+                ? Array.Empty<IPAddressRange>()
+                : _cfg.AllowedIPs.Select(IPAddressRange.Parse).ToArray();
+
+            _log.LogInformation(_cfg.AllowAllIPs
+                ? "Relay mode: Allow ALL IPs"
+                : $"Relay mode: Allow {_ranges.Length} range(s)");
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override Task ExecuteAsync(CancellationToken token)
         {
-            // Build shared paths
-            var baseDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-                "SMTP Relay", "service");
-            var logDir = Path.Combine(baseDir, "logs");
-            Directory.CreateDirectory(logDir);
-
-            // Log startup mode
-            _log.Information("Relay mode: {Mode}",
-                _cfg.AllowAllIPs
-                    ? "Allow ALL IPs"
-                    : $"Allow { _cfg.AllowedIPs.Count } range(s)");
-            _log.Information("Application started. Content root: {Root}", baseDir);
-
-            // Build SMTP server options
             var options = new SmtpServerOptionsBuilder()
-                .ServerName("SMTP Relay Service")
-                .Endpoint(builder => builder
-                    .Port(_cfg.ListenPort, Protocol.SmtpServerAuthentication.None))
-                // Inbound store hands off to your MessageRelayStore
-                .MessageStore(new MessageRelayStore(_cfg, _log))
-                // **ONLY** this protocol logger, writing smtp-proto-YYYYMMDD.log
-                .ProtocolLogger(new ProtocolLogger(
-                    Path.Combine(logDir, $"smtp-proto-{DateTime.Now:yyyyMMdd}.log")))
+                .ServerName("SMTP Relay")
+                .Port(25)
                 .Build();
 
-            // Start the server
-            var smtpServer = new SmtpServer.SmtpServer(options);
-            await smtpServer.StartAsync(stoppingToken);
+            var provider = new ServiceProvider();
+            provider.Add(new RelayStore(_cfg, _ranges, _log));
+
+            _log.LogInformation("SMTP Relay listening on port 25");
+            return new SmtpServer.SmtpServer(options, provider)
+                .StartAsync(token);
+        }
+
+        /// <summary>
+        /// Enforces the IP allow-list, logs via both “app” and “smtp” loggers,
+        /// and relays mail when permitted.
+        /// </summary>
+        private sealed class RelayStore : MessageStore
+        {
+            readonly Config            _cfg;
+            readonly IPAddressRange[]  _ranges;
+            readonly ILogger           _log;
+
+            public RelayStore(
+                Config cfg,
+                IPAddressRange[] ranges,
+                ILogger log)
+            {
+                _cfg    = cfg;
+                _ranges = ranges;
+                _log    = log;
+            }
+
+            public override async Task<SmtpResponse> SaveAsync(
+                ISessionContext     context,
+                IMessageTransaction transaction,
+                ReadOnlySequence<byte> buffer,
+                CancellationToken   cancellationToken)
+            {
+                // 1) Extract the *client* IP, skipping server-listeners (0.0.0.0/::)
+                IPAddress? ip = context.Properties.Values
+                    .OfType<IPEndPoint>()
+                    .Where(ep =>
+                        !IPAddress.Any.Equals(ep.Address) &&
+                        !IPAddress.IPv6Any.Equals(ep.Address))
+                    .Select(ep => ep.Address)
+                    .FirstOrDefault();
+
+                // 2) Log the attempt
+                _log.LogInformation("Incoming relay request from {IP}", ip);
+                SmtpLogger.Logger.Information("Incoming relay request from {IP}", ip);
+
+                // 3) Enforce allow-list
+                bool allowed = _cfg.AllowAllIPs
+                            || _ranges.Length == 0
+                            || (ip != null && _ranges.Any(r => r.Contains(ip)));
+
+                if (!allowed)
+                {
+                    _log.LogWarning("DENIED {IP} — not in allow-list", ip);
+                    SmtpLogger.Logger.Warning("DENIED {IP} — not in allow-list", ip);
+
+                    return new SmtpResponse(
+                        SmtpReplyCode.MailboxUnavailable,
+                        "550 Relaying Denied");
+                }
+
+                // 4) Forward mail
+                try
+                {
+                    await MailSender.SendAsync(
+                        _cfg, buffer, cancellationToken);
+
+                    _log.LogInformation("Relayed mail from {IP}", ip);
+                    SmtpLogger.Logger.Information("Relayed mail from {IP}", ip);
+
+                    return SmtpResponse.Ok;
+                }
+                catch (Exception ex)
+                {
+                    _log.LogError(ex, "Relay failure from {IP}", ip);
+                    SmtpLogger.Logger.Error(ex, "Relay failure from {IP}", ip);
+
+                    return SmtpResponse.TransactionFailed;
+                }
+            }
         }
     }
 }
