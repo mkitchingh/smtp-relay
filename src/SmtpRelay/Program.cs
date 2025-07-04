@@ -10,30 +10,37 @@ namespace SmtpRelay
     {
         static void Main(string[] args)
         {
-            // Shared folders
+            // Base folders under Program Files\SMTP Relay\service
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "SMTP Relay", "service");
             var logDir = Path.Combine(baseDir, "logs");
             Directory.CreateDirectory(logDir);
 
-            // Serilog: only a single rolling app log
+            // Read retention from config if you like, or hard-code
+            const int retentionDays = 30;
+
+            // Serilog: only the general application log
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
+                // General application log (app-YYYYMMDD.log)
                 .WriteTo.File(
                     Path.Combine(logDir, "app-.log"),
                     rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: 7)
+                    retainedFileCountLimit: retentionDays)
                 .CreateLogger();
 
             try
             {
                 Log.Information("Starting SMTP Relay Service");
+
                 Host.CreateDefaultBuilder(args)
                     .UseWindowsService()
                     .UseSerilog()
-                    .ConfigureServices((_, services) =>
-                        services.AddHostedService<Worker>())
+                    .ConfigureServices((hostContext, services) =>
+                    {
+                        services.AddHostedService<Worker>();
+                    })
                     .Build()
                     .Run();
             }
