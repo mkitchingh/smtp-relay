@@ -1,3 +1,5 @@
+// src/SmtpRelay/Program.cs
+
 using System;
 using System.IO;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,20 +12,21 @@ namespace SmtpRelay
     {
         static void Main(string[] args)
         {
-            // Shared folders
+            // where we keep logs under Program Files\SMTP Relay\service\logs
             var baseDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
                 "SMTP Relay", "service");
             var logDir = Path.Combine(baseDir, "logs");
             Directory.CreateDirectory(logDir);
 
-            // Serilog: only a single rolling app log
+            // Serilog: only the application log here
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
+                // General application log (app-*.log)
                 .WriteTo.File(
                     Path.Combine(logDir, "app-.log"),
                     rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: 7)
+                    retainedFileCountLimit: 30)
                 .CreateLogger();
 
             try
